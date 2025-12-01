@@ -7,6 +7,7 @@ import com.perpustakaan.service_pengembalian.vo.ResponseTemplateVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import com.perpustakaan.service_pengembalian.dto.PengembalianRequest;
 
 @Service
 public class PengembalianService {
@@ -17,7 +18,12 @@ public class PengembalianService {
     @Autowired
     private RestTemplate restTemplate;
 
-    public Pengembalian savePengembalian(Pengembalian pengembalian) {
+    public Pengembalian savePengembalian(PengembalianRequest request) {
+        Pengembalian pengembalian = new Pengembalian();
+        pengembalian.setPeminjamanId(request.getPeminjamanId());
+        pengembalian.setTanggalDikembalikan(request.getTanggalDikembalikan());
+        pengembalian.setTerlambat(request.getTerlambat());
+        pengembalian.setDenda(request.getDenda());
         return pengembalianRepository.save(pengembalian);
     }
 

@@ -5,6 +5,7 @@ import com.perpustakaan.service_pengembalian.service.PengembalianService;
 import com.perpustakaan.service_pengembalian.vo.ResponseTemplateVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.perpustakaan.service_pengembalian.dto.PengembalianRequest;
 
 @RestController
 @RequestMapping("/api/pengembalian")
@@ -14,8 +15,8 @@ public class PengembalianController {
     private PengembalianService pengembalianService;
 
     @PostMapping
-    public Pengembalian savePengembalian(@RequestBody Pengembalian pengembalian) {
-        return pengembalianService.savePengembalian(pengembalian);
+    public Pengembalian savePengembalian(@RequestBody PengembalianRequest request) {
+        return pengembalianService.savePengembalian(request);
     }
 
     @GetMapping("/{id}")
