@@ -6,6 +6,7 @@ import com.perpustakaan.service_peminjaman.vo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import com.perpustakaan.service_peminjaman.dto.PeminjamanRequest;
 
 @Service
 public class PeminjamanService {
@@ -15,7 +16,13 @@ public class PeminjamanService {
     @Autowired
     private RestTemplate restTemplate;
 
-    public Peminjaman savePeminjaman(Peminjaman peminjaman) {
+    public Peminjaman savePeminjaman(PeminjamanRequest request) {
+        Peminjaman peminjaman = new Peminjaman();
+        peminjaman.setAnggotaId(request.getAnggotaId());
+        peminjaman.setBukuId(request.getBukuId());
+        peminjaman.setTanggalPinjam(request.getTanggalPinjam());
+        peminjaman.setTanggalKembali(request.getTanggalKembali());
+        peminjaman.setStatus(request.getStatus());
         return peminjamanRepository.save(peminjaman);
     }
 
