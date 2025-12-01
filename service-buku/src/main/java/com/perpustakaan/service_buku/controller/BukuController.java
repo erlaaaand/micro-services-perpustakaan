@@ -5,6 +5,7 @@ import com.perpustakaan.service_buku.service.BukuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import com.perpustakaan.service_buku.dto.BukuRequest;
 
 @RestController
 @RequestMapping("/api/buku")
@@ -14,8 +15,8 @@ public class BukuController {
     private BukuService bukuService;
 
     @PostMapping
-    public Buku saveBuku(@RequestBody Buku buku) {
-        return bukuService.saveBuku(buku);
+    public Buku saveBuku(@RequestBody BukuRequest request) {
+        return bukuService.saveBuku(request);
     }
 
     @GetMapping("/{id}")
