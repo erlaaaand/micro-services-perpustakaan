@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: 'microservices_perpustakaan'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['service-anggota:8081', 'service-buku:8082', 'service-peminjaman:8083', 'service-pengembalian:8084']
