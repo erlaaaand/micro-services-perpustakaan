@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import com.perpustakaan.service_anggota.dto.AnggotaRequest;
-import com.perpustakaan.service_anggota.entity.Anggota;
 
 @Service
 public class AnggotaService {
