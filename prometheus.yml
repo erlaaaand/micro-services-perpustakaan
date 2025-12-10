@@ -1,8 +1,32 @@
 global:
   scrape_interval: 10s
+  evaluation_interval: 10s
 
 scrape_configs:
-  - job_name: 'microservices_perpustakaan'
+  # Eureka Server
+  - job_name: 'eureka-server'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['service-anggota:8081', 'service-buku:8082', 'service-peminjaman:8083', 'service-pengembalian:8084']
+      - targets: ['eureka-server:8761']
+        labels:
+          application: 'eureka-server'
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          application: 'api-gateway'
+
+  # Microservices
+  - job_name: 'microservices'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: 
+          - 'service-anggota:8081'
+          - 'service-buku:8082'
+          - 'service-peminjaman:8083'
+          - 'service-pengembalian:8084'
+        labels:
+          group: 'microservices'

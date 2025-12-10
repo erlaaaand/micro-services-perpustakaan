@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      mvc:
+        routes:
+          # Route untuk Service Anggota
+          - id: service-anggota
+            uri: lb://service-anggota
+            predicates:
+              - Path=/api/anggota/**
+          
+          # Route untuk Service Buku
+          - id: service-buku
+            uri: lb://service-buku
+            predicates:
+              - Path=/api/buku/**
+          
+          # Route untuk Service Peminjaman
+          - id: service-peminjaman
+            uri: lb://service-peminjaman
+            predicates:
+              - Path=/api/peminjaman/**
+          
+          # Route untuk Service Pengembalian
+          - id: service-pengembalian
+            uri: lb://service-pengembalian
+            predicates:
+              - Path=/api/pengembalian/**
+          
+          # Route untuk Eureka Dashboard
+          - id: eureka-server
+            uri: http://eureka-server:8761
+            predicates:
+              - Path=/eureka/**
+
+server:
+  port: 8080
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+
+# Monitoring & Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://localhost:9411/api/v2/spans}
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.loadbalancer: DEBUG
