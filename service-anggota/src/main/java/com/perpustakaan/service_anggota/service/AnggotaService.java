@@ -1,11 +1,12 @@
 package com.perpustakaan.service_anggota.service;
 
+import com.perpustakaan.service_anggota.dto.AnggotaRequest;
 import com.perpustakaan.service_anggota.entity.Anggota;
 import com.perpustakaan.service_anggota.repository.AnggotaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
-import com.perpustakaan.service_anggota.dto.AnggotaRequest;
+import java.util.Optional;
 
 @Service
 public class AnggotaService {
@@ -29,5 +30,26 @@ public class AnggotaService {
 
     public List<Anggota> getAllAnggota() {
         return anggotaRepository.findAll();
+    }
+
+    public Anggota updateAnggota(Long id, AnggotaRequest request) {
+        Optional<Anggota> existing = anggotaRepository.findById(id);
+        if (existing.isPresent()) {
+            Anggota anggota = existing.get();
+            anggota.setNomorAnggota(request.getNomorAnggota());
+            anggota.setNama(request.getNama());
+            anggota.setAlamat(request.getAlamat());
+            anggota.setEmail(request.getEmail());
+            return anggotaRepository.save(anggota);
+        }
+        return null;
+    }
+
+    public boolean deleteAnggota(Long id) {
+        if (anggotaRepository.existsById(id)) {
+            anggotaRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 }
