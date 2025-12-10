@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_REGISTRY = 'your-registry' // Sesuaikan dengan registry Anda
+        DOCKER_REGISTRY = 'your-registry'
         DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
     }
 
@@ -23,6 +23,14 @@ pipeline {
                 stage('Build Eureka Server') {
                     steps {
                         dir('perpustakaan-microservices/eureka-server') {
+                            sh 'mvn clean package -DskipTests=false'
+                            junit '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+                stage('Build API Gateway') {
+                    steps {
+                        dir('api-gateway') {
                             sh 'mvn clean package -DskipTests=false'
                             junit '**/target/surefire-reports/*.xml'
                         }
@@ -66,8 +74,8 @@ pipeline {
         stage('Code Quality Analysis') {
             steps {
                 script {
-                    // SonarQube analysis (opsional)
                     echo 'Running code quality analysis...'
+                    // Uncomment untuk SonarQube
                     // sh 'mvn sonar:sonar'
                 }
             }
@@ -80,6 +88,16 @@ pipeline {
                         dir('perpustakaan-microservices/eureka-server') {
                             script {
                                 def image = docker.build("perpus/eureka-server:${env.BUILD_NUMBER}")
+                                image.tag('latest')
+                            }
+                        }
+                    }
+                }
+                stage('API Gateway Image') {
+                    steps {
+                        dir('api-gateway') {
+                            script {
+                                def image = docker.build("perpus/api-gateway:${env.BUILD_NUMBER}")
                                 image.tag('latest')
                             }
                         }
@@ -135,6 +153,8 @@ pipeline {
                         sh '''
                             docker push perpus/eureka-server:${BUILD_NUMBER}
                             docker push perpus/eureka-server:latest
+                            docker push perpus/api-gateway:${BUILD_NUMBER}
+                            docker push perpus/api-gateway:latest
                             docker push perpus/service-anggota:${BUILD_NUMBER}
                             docker push perpus/service-anggota:latest
                             docker push perpus/service-buku:${BUILD_NUMBER}
@@ -164,8 +184,9 @@ pipeline {
                 script {
                     echo 'Running health checks...'
                     sh '''
-                        sleep 30
+                        sleep 60
                         curl -f http://localhost:8761/actuator/health || exit 1
+                        curl -f http://localhost:8080/actuator/health || exit 1
                         curl -f http://localhost:8081/actuator/health || exit 1
                         curl -f http://localhost:8082/actuator/health || exit 1
                         curl -f http://localhost:8083/actuator/health || exit 1
@@ -193,11 +214,13 @@ pipeline {
         }
         success {
             echo 'Pipeline berhasil dijalankan!'
-            slackSend(color: 'good', message: "Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER} berhasil!")
+            // Uncomment untuk Slack notification
+            // slackSend(color: 'good', message: "Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER} berhasil!")
         }
         failure {
             echo 'Pipeline gagal!'
-            slackSend(color: 'danger', message: "Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER} gagal!")
+            // Uncomment untuk Slack notification
+            // slackSend(color: 'danger', message: "Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER} gagal!")
         }
     }
 }

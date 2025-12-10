@@ -1,383 +1,360 @@
-# 📚 Microservices Perpustakaan - CI/CD, Monitoring & Logging
+# 📚 Sistem Microservices Perpustakaan
 
-Sistem manajemen perpustakaan berbasis microservices dengan implementasi lengkap CI/CD Pipeline, Monitoring, dan Distributed Tracing.
+Sistem manajemen perpustakaan berbasis microservices dengan implementasi CI/CD, monitoring, dan distributed tracing.
 
-## 🏗️ Architecture
+## 🏗️ Arsitektur
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     External Clients                         │
-└───────────────────────┬─────────────────────────────────────┘
-                        │
-        ┌───────────────┴──────────────┐
-        │      Eureka Server           │
-        │   (Service Discovery)        │
-        └───────────────┬──────────────┘
-                        │
-        ┌───────────────┴──────────────────────┐
-        │                                      │
-   ┌────▼────┐  ┌────────┐  ┌─────────┐  ┌───────────┐
-   │Anggota  │  │  Buku  │  │Peminjaman│  │Pengembalian│
-   │Service  │  │Service │  │ Service │  │  Service   │
-   │ :8081   │  │ :8082  │  │  :8083  │  │   :8084    │
-   └─────────┘  └────────┘  └─────────┘  └───────────┘
-        │           │            │              │
-        └───────────┴────────────┴──────────────┘
-                        │
-        ┌───────────────┴──────────────────────┐
-        │                                      │
-   ┌────▼────┐  ┌─────────┐  ┌────────┐  ┌────────┐
-   │ Zipkin  │  │Prometheus│  │Grafana │  │Jenkins │
-   │ :9411   │  │  :9090   │  │ :3000  │  │ :8080  │
-   └─────────┘  └──────────┘  └────────┘  └────────┘
+┌─────────────────┐
+│   API Gateway   │ (Port 8080)
+│   Load Balancer │
+└────────┬────────┘
+         │
+    ┌────┴─────────────────────┐
+    │   Eureka Server (8761)   │
+    │   Service Discovery      │
+    └──────────────────────────┘
+         │
+    ┌────┴────────────────────────────┐
+    │                                 │
+┌───┴────────┐  ┌──────────────┐  ┌──┴──────────┐
+│  Service   │  │   Service    │  │   Service   │
+│  Anggota   │  │    Buku      │  │ Peminjaman  │
+│  (8081)    │  │   (8082)     │  │   (8083)    │
+└────────────┘  └──────────────┘  └─────────────┘
+                                       │
+                                  ┌────┴─────────┐
+                                  │   Service    │
+                                  │ Pengembalian │
+                                  │   (8084)     │
+                                  └──────────────┘
+
+Monitoring Stack:
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│Prometheus│  │ Grafana  │  │  Zipkin  │
+│  (9090)  │  │  (3000)  │  │  (9411)  │
+└──────────┘  └──────────┘  └──────────┘
 ```
 
-## 🎯 Features
+## 🚀 Services
 
-### Microservices
-- **Eureka Server**: Service Discovery & Registration
-- **Service Anggota**: Manajemen data anggota perpustakaan
-- **Service Buku**: Manajemen katalog buku
-- **Service Peminjaman**: Transaksi peminjaman buku
-- **Service Pengembalian**: Transaksi pengembalian buku
+| Service | Port | Deskripsi |
+|---------|------|-----------|
+| Eureka Server | 8761 | Service Discovery & Registration |
+| API Gateway | 8080 | Routing & Load Balancing |
+| Service Anggota | 8081 | Manajemen data anggota perpustakaan |
+| Service Buku | 8082 | Manajemen katalog buku |
+| Service Peminjaman | 8083 | Proses peminjaman buku |
+| Service Pengembalian | 8084 | Proses pengembalian buku |
+| Prometheus | 9090 | Metrics Collection |
+| Grafana | 3000 | Metrics Visualization |
+| Zipkin | 9411 | Distributed Tracing |
 
-### Infrastructure
-- **Docker & Docker Compose**: Containerization
-- **Jenkins**: CI/CD Pipeline automation
-- **Prometheus**: Metrics collection
-- **Grafana**: Metrics visualization
-- **Zipkin**: Distributed tracing
+## 📋 Prerequisites
 
-## 🚀 Quick Start
-
-### Prerequisites
-```bash
-- Java 17
-- Maven 3.9+
+- Java 17+
+- Maven 3.6+
 - Docker & Docker Compose
-- Git
-- Jenkins (optional for CI/CD)
-```
+- Jenkins (untuk CI/CD)
 
-### Installation
+## 🛠️ Instalasi & Menjalankan
 
-1. **Clone Repository**
+### 1. Clone Repository
 ```bash
 git clone <repository-url>
-cd micro-services-perpustakaan
+cd perpustakaan-microservices
 ```
 
-2. **Build All Services**
+### 2. Build Semua Services
 ```bash
-./build-all.sh
-# atau manual:
+# Build Eureka Server
+cd perpustakaan-microservices/eureka-server
+mvn clean package -DskipTests
+
+# Build Service Anggota
+cd ../../service-anggota
+mvn clean package -DskipTests
+
+# Build Service Buku
+cd ../service-buku
+mvn clean package -DskipTests
+
+# Build Service Peminjaman
+cd ../service-peminjaman
+mvn clean package -DskipTests
+
+# Build Service Pengembalian
+cd ../service-pengembalian
+mvn clean package -DskipTests
+
+# Build API Gateway
+cd ../api-gateway
 mvn clean package -DskipTests
 ```
 
-3. **Start Infrastructure**
+### 3. Jalankan dengan Docker Compose
 ```bash
+cd ..
 docker-compose up -d
 ```
 
-4. **Verify Services**
+### 4. Cek Status Services
 ```bash
-# Run automated test
-chmod +x test-microservices.sh
-./test-microservices.sh
+docker-compose ps
 ```
 
-## 📦 Service Endpoints
+## 🔍 Akses Services
 
-### Eureka Server
-- Dashboard: http://localhost:8761
+- **Eureka Dashboard**: http://localhost:8761
+- **API Gateway**: http://localhost:8080
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Zipkin**: http://localhost:9411
 
-### Service Anggota (Port 8081)
+## 📡 API Endpoints
+
+### Via API Gateway (Port 8080)
+
+#### Service Anggota
 ```bash
-# Create
-POST http://localhost:8081/api/anggota
-Content-Type: application/json
+# Create Anggota
+POST http://localhost:8080/api/anggota
 {
   "nomorAnggota": "A001",
   "nama": "John Doe",
-  "alamat": "Jl. Test",
-  "email": "john@test.com"
+  "alamat": "Jl. Contoh No. 123",
+  "email": "john@example.com"
 }
 
-# Get All
-GET http://localhost:8081/api/anggota
+# Get Anggota by ID
+GET http://localhost:8080/api/anggota/{id}
 
-# Get by ID
-GET http://localhost:8081/api/anggota/{id}
+# Get All Anggota
+GET http://localhost:8080/api/anggota
 ```
 
-### Service Buku (Port 8082)
+#### Service Buku
 ```bash
-# Create
-POST http://localhost:8082/api/buku
-Content-Type: application/json
+# Create Buku
+POST http://localhost:8080/api/buku
 {
   "kodeBuku": "B001",
-  "judul": "Spring Boot",
-  "pengarang": "Author Name",
-  "penerbit": "Publisher",
+  "judul": "Spring Boot Microservices",
+  "pengarang": "John Smith",
+  "penerbit": "Tech Publisher",
   "tahunTerbit": 2024
 }
 
-# Get All
-GET http://localhost:8082/api/buku
+# Get Buku by ID
+GET http://localhost:8080/api/buku/{id}
 
-# Get by ID
-GET http://localhost:8082/api/buku/{id}
+# Get All Buku
+GET http://localhost:8080/api/buku
 ```
 
-### Service Peminjaman (Port 8083)
+#### Service Peminjaman
 ```bash
-# Create
-POST http://localhost:8083/api/peminjaman
-Content-Type: application/json
+# Create Peminjaman
+POST http://localhost:8080/api/peminjaman
 {
   "anggotaId": 1,
   "bukuId": 1,
-  "tanggalPinjam": "2024-12-01",
-  "tanggalKembali": "2024-12-15",
+  "tanggalPinjam": "2024-12-10",
+  "tanggalKembali": "2024-12-17",
   "status": "DIPINJAM"
 }
 
-# Get with Details (includes Anggota & Buku data)
-GET http://localhost:8083/api/peminjaman/{id}
+# Get Peminjaman by ID (dengan detail anggota & buku)
+GET http://localhost:8080/api/peminjaman/{id}
 ```
 
-### Service Pengembalian (Port 8084)
+#### Service Pengembalian
 ```bash
-# Create
-POST http://localhost:8084/api/pengembalian
-Content-Type: application/json
+# Create Pengembalian
+POST http://localhost:8080/api/pengembalian
 {
   "peminjamanId": 1,
-  "tanggalDikembalikan": "2024-12-16",
+  "tanggalDikembalikan": "2024-12-18",
   "terlambat": 1,
   "denda": 5000
 }
 
-# Get with Details (includes Peminjaman data)
-GET http://localhost:8084/api/pengembalian/{id}
+# Get Pengembalian by ID (dengan detail peminjaman)
+GET http://localhost:8080/api/pengembalian/{id}
 ```
 
-## 📊 Monitoring & Observability
+## 🔧 CI/CD dengan Jenkins
 
-### Prometheus (Port 9090)
-- Access: http://localhost:9090
-- Metrics endpoint: http://localhost:808x/actuator/prometheus
-- Query examples:
-  - `up` - Check services status
-  - `http_server_requests_seconds_count` - HTTP request count
-  - `jvm_memory_used_bytes` - JVM memory usage
-
-### Grafana (Port 3000)
-- Access: http://localhost:3000
-- Default credentials: admin/admin
-- Add Prometheus datasource: http://prometheus:9090
-- Import dashboard ID: 4701 (JVM Micrometer)
-
-### Zipkin (Port 9411)
-- Access: http://localhost:9411
-- View distributed traces
-- Analyze inter-service communication
-
-## 🔄 CI/CD Pipeline
-
-### Jenkins Setup
+### Setup Jenkins Pipeline
 
 1. **Install Jenkins**
 ```bash
-# Docker
-docker run -p 8080:8080 -p 50000:50000 -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts
-
-# Access: http://localhost:8080
+docker run -d -p 8090:8080 -p 50000:50000 \
+  -v jenkins_home:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --name jenkins jenkins/jenkins:lts
 ```
 
-2. **Configure Pipeline**
-- Create new Pipeline job
-- SCM: Git (your repository)
-- Script Path: Jenkinsfile
+2. **Install Required Plugins**
+   - Docker Pipeline
+   - Maven Integration
+   - Email Extension
+   - Slack Notification (optional)
 
-3. **Required Plugins**
-- Docker Pipeline
-- Maven Integration
-- Email Extension
+3. **Create Pipeline Job**
+   - New Item → Pipeline
+   - Pipeline script from SCM
+   - Select Git
+   - Repository URL: <your-repo-url>
+   - Script Path: Jenkinsfile
+
+4. **Configure Credentials**
+   - Docker Hub credentials (docker-hub-credentials)
+   - Email SMTP settings
 
 ### Pipeline Stages
-1. **Checkout**: Pull source code
-2. **Build & Test**: Compile and test all services
-3. **Code Quality**: SonarQube analysis (optional)
-4. **Build Docker Images**: Create container images
-5. **Push to Registry**: Push images to Docker registry
-6. **Deploy**: Deploy using docker-compose
-7. **Health Check**: Verify all services are healthy
+
+1. **Checkout**: Pull kode dari repository
+2. **Build & Test**: Build semua services dengan Maven
+3. **Code Quality**: Analisis kode (optional)
+4. **Docker Build**: Build Docker images
+5. **Push to Registry**: Push images ke registry
+6. **Deploy**: Deploy dengan Docker Compose
+7. **Health Check**: Verifikasi semua services berjalan
+
+## 📊 Monitoring
+
+### Prometheus Metrics
+- Request rates
+- Response times
+- Error rates
+- JVM metrics
+
+### Grafana Dashboards
+1. Login: http://localhost:3000
+2. Username: admin
+3. Password: admin
+4. Import dashboards dari folder `grafana/dashboards/`
+
+### Zipkin Tracing
+- Lihat request traces di http://localhost:9411
+- Monitor latency antar services
+- Debug distributed transactions
+
+## 🐳 Docker Commands
+
+```bash
+# Build ulang semua images
+docker-compose build
+
+# Start services
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs -f [service-name]
+
+# Restart specific service
+docker-compose restart [service-name]
+
+# Remove all containers dan volumes
+docker-compose down -v
+```
+
+## 🔄 Update Docker Images
+
+### Jika Ada Perubahan Kode:
+
+```bash
+# 1. Build ulang JAR file
+cd [service-directory]
+mvn clean package -DskipTests
+
+# 2. Build ulang Docker image
+docker-compose build [service-name]
+
+# 3. Restart service
+docker-compose up -d [service-name]
+
+# Atau rebuild semua sekaligus:
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
+
+### Update via Jenkins:
+- Trigger pipeline build
+- Jenkins akan otomatis build, test, dan deploy
 
 ## 🧪 Testing
 
-### Unit Tests
 ```bash
-mvn test
+# Run tests untuk semua services
+cd perpustakaan-microservices/eureka-server && mvn test
+cd ../../service-anggota && mvn test
+cd ../service-buku && mvn test
+cd ../service-peminjaman && mvn test
+cd ../service-pengembalian && mvn test
 ```
 
-### Integration Tests
-```bash
-mvn verify
-```
+## 📝 Environment Variables
 
-### Automated Full Test
-```bash
-./test-microservices.sh
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE | Eureka server URL | http://eureka-server:8761/eureka/ |
+| MANAGEMENT_ZIPKIN_TRACING_ENDPOINT | Zipkin endpoint | http://zipkin:9411/api/v2/spans |
 
-### Manual Testing
-```bash
-# Import Postman collection
-postman-collection.json
-```
+## 🛡️ Best Practices
 
-## 📈 Performance Monitoring
-
-### Health Checks
-```bash
-curl http://localhost:8081/actuator/health
-curl http://localhost:8082/actuator/health
-curl http://localhost:8083/actuator/health
-curl http://localhost:8084/actuator/health
-```
-
-### Metrics
-```bash
-curl http://localhost:8081/actuator/metrics
-curl http://localhost:8081/actuator/prometheus
-```
-
-## 🛠️ Configuration
-
-### Application Properties
-Each service has its own configuration:
-- Database: H2 (in-memory)
-- Eureka client configuration
-- Actuator endpoints
-- Zipkin tracing
-
-### Environment Variables
-```yaml
-# docker-compose.yml
-EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
-MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
-```
+1. **Service Communication**: Gunakan Eureka untuk service discovery
+2. **Circuit Breaker**: Implementasi Resilience4j untuk fault tolerance
+3. **API Gateway**: Selalu akses services melalui gateway
+4. **Monitoring**: Pantau metrics di Grafana secara regular
+5. **Logging**: Gunakan Zipkin untuk trace distributed requests
 
 ## 🐛 Troubleshooting
 
-### Service tidak register ke Eureka
-```bash
-# Check Eureka logs
-docker-compose logs eureka-server
+### Service tidak register di Eureka
+- Cek koneksi network
+- Pastikan eureka.client.service-url.defaultZone benar
+- Tunggu 30 detik untuk registrasi
 
-# Restart service
-docker-compose restart service-anggota
+### Docker Compose gagal start
+```bash
+# Cek logs
+docker-compose logs
+
+# Rebuild images
+docker-compose build --no-cache
 ```
 
-### Health check failed
+### Port sudah digunakan
 ```bash
-# Check service logs
-docker-compose logs -f service-anggota
+# Cek port yang digunakan
+netstat -ano | findstr :8080
 
-# Check network
-docker exec service-anggota ping eureka-server
+# Ubah port di application.properties
 ```
 
-### Prometheus tidak scraping
-```bash
-# Verify prometheus.yml
-cat prometheus.yml
+## 📚 Tech Stack
 
-# Check targets
-curl http://localhost:9090/api/v1/targets
-```
+- **Framework**: Spring Boot 4.0.0, Spring Cloud 2025.1.0
+- **Service Discovery**: Netflix Eureka
+- **API Gateway**: Spring Cloud Gateway
+- **Database**: H2 (in-memory)
+- **Monitoring**: Prometheus + Grafana
+- **Tracing**: Zipkin
+- **Containerization**: Docker
+- **Orchestration**: Docker Compose
+- **CI/CD**: Jenkins
+- **Build Tool**: Maven
 
-## 📝 Development
+## 👥 Contributors
 
-### Add New Service
-1. Create Spring Boot project
-2. Add dependencies (Eureka Client, Actuator, etc.)
-3. Configure application.properties
-4. Create Dockerfile
-5. Update docker-compose.yml
-6. Update Jenkinsfile
-7. Update prometheus.yml
-
-### Update Service
-```bash
-# Build
-mvn clean package
-
-# Rebuild image
-docker-compose build service-name
-
-# Restart
-docker-compose restart service-name
-```
-
-## 🔒 Security Considerations
-
-- Implement Spring Security for authentication
-- Use JWT for stateless authentication
-- Add API Gateway for centralized security
-- Enable HTTPS/TLS
-- Secure Eureka dashboard
-- Implement rate limiting
-
-## 🚀 Production Deployment
-
-### Kubernetes
-```bash
-# Coming soon
-kubectl apply -f k8s/
-```
-
-### Production Checklist
-- [ ] Replace H2 with production database (PostgreSQL/MySQL)
-- [ ] Configure external configuration server
-- [ ] Set up load balancers
-- [ ] Implement circuit breakers
-- [ ] Configure backup and recovery
-- [ ] Set up alerting
-- [ ] Implement log aggregation (ELK)
-
-## 📚 Documentation
-
-- [API Documentation](docs/api.md)
-- [Architecture Guide](docs/architecture.md)
-- [Deployment Guide](docs/deployment.md)
-- [Monitoring Guide](docs/monitoring.md)
-
-## 👥 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+- [Your Name]
 
 ## 📄 License
 
-This project is licensed under the MIT License - see LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Spring Boot
-- Spring Cloud Netflix
-- Micrometer
-- Zipkin
-- Prometheus
-- Grafana
-
-## 📞 Contact
-
-- Email: blackpenta98@gmail.com
-
----
+MIT License

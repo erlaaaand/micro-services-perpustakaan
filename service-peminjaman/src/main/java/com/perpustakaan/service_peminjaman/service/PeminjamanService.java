@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import com.perpustakaan.service_peminjaman.dto.PeminjamanRequest;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import java.util.List;
 
 @Service
 public class PeminjamanService {
@@ -15,6 +18,9 @@ public class PeminjamanService {
 
     @Autowired
     private RestTemplate restTemplate;
+    
+    @Autowired
+    private DiscoveryClient discoveryClient;
 
     public Peminjaman savePeminjaman(PeminjamanRequest request) {
         Peminjaman peminjaman = new Peminjaman();
@@ -30,13 +36,31 @@ public class PeminjamanService {
         ResponseTemplateVO vo = new ResponseTemplateVO();
         Peminjaman peminjaman = peminjamanRepository.findById(peminjamanId).get();
         
-        Anggota anggota = restTemplate.getForObject("http://localhost:8081/api/anggota/" + peminjaman.getAnggotaId(), Anggota.class);
+        // Gunakan Service Discovery untuk mendapatkan URL service
+        String anggotaUrl = getServiceUrl("service-anggota");
+        String bukuUrl = getServiceUrl("service-buku");
+        
+        Anggota anggota = restTemplate.getForObject(
+            anggotaUrl + "/api/anggota/" + peminjaman.getAnggotaId(), 
+            Anggota.class
+        );
 
-        Buku buku = restTemplate.getForObject("http://localhost:8082/api/buku/" + peminjaman.getBukuId(), Buku.class);
+        Buku buku = restTemplate.getForObject(
+            bukuUrl + "/api/buku/" + peminjaman.getBukuId(), 
+            Buku.class
+        );
 
         vo.setPeminjaman(peminjaman);
         vo.setAnggota(anggota);
         vo.setBuku(buku);
         return vo;
+    }
+    
+    private String getServiceUrl(String serviceName) {
+        List<ServiceInstance> instances = discoveryClient.getInstances(serviceName);
+        if (instances != null && !instances.isEmpty()) {
+            return instances.get(0).getUri().toString();
+        }
+        throw new RuntimeException("Service " + serviceName + " not found");
     }
 }
