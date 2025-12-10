@@ -1,7 +1,11 @@
 version: '3.8'
 
 services:
-  # --- Infrastructure ---
+  # ==========================================
+  # 1. INFRASTRUCTURE (Monitoring & Logging)
+  # ==========================================
+  
+  # --- Distributed Tracing ---
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
@@ -10,6 +14,7 @@ services:
     networks:
       - perpustakaan-network
 
+  # --- Metrics Collection ---
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -20,6 +25,7 @@ services:
     networks:
       - perpustakaan-network
 
+  # --- Visualization Dashboard ---
   grafana:
     image: grafana/grafana
     container_name: grafana
@@ -34,7 +40,62 @@ services:
     networks:
       - perpustakaan-network
 
-  # --- Service Discovery ---
+  # --- Centralized Logging (ELK Stack) ---
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - perpustakaan-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - perpustakaan-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - perpustakaan-network
+
+  # ==========================================
+  # 2. SERVICE DISCOVERY
+  # ==========================================
   eureka-server:
     build: ./perpustakaan-microservices/eureka-server
     container_name: eureka-server
@@ -51,7 +112,9 @@ services:
       timeout: 10s
       retries: 5
 
-  # --- API Gateway ---
+  # ==========================================
+  # 3. API GATEWAY
+  # ==========================================
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
@@ -69,7 +132,9 @@ services:
       - perpustakaan-network
     restart: on-failure
 
-  # --- Microservices ---
+  # ==========================================
+  # 4. MICROSERVICES
+  # ==========================================
   service-anggota:
     build: ./service-anggota
     container_name: service-anggota
@@ -138,6 +203,13 @@ services:
       - perpustakaan-network
     restart: on-failure
 
+# ==========================================
+# NETWORKS & VOLUMES
+# ==========================================
 networks:
   perpustakaan-network:
     driver: bridge
+
+volumes:
+  elasticsearch-data:
+    driver: local
