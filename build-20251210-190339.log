@@ -1,0 +1,79 @@
+[0;34m╔════════════════════════════════════════╗[0m
+[0;34m║  Library Microservices Build Script   ║[0m
+[0;34m║         Enhanced Version 2.0           ║[0m
+[0;34m╚════════════════════════════════════════╝[0m
+[1;33mBuild log: build-20251210-190339.log[0m
+
+[0;34m==========================================[0m
+[0;34mChecking Prerequisites[0m
+[0;34m==========================================[0m
+[0;32m✅ Java 17.0.17 found[0m
+[0;32m✅ Maven 3.9.11 found[0m
+[0;32m✅ Docker 28.3.2 found and running[0m
+[0;32m✅ Docker Compose v2.39.1-desktop.1 found[0m
+
+[0;34m==========================================[0m
+[0;34mVerifying Directory Structure[0m
+[0;34m==========================================[0m
+[0;32m✅ Found: eureka-server[0m
+[0;32m✅ Found: api-gateway[0m
+[0;32m✅ Found: service-anggota[0m
+[0;32m✅ Found: service-buku[0m
+[0;32m✅ Found: service-peminjaman[0m
+[0;32m✅ Found: service-pengembalian[0m
+
+[0;34m==========================================[0m
+[0;34mBuilding Eureka Server[0m
+[0;34m==========================================[0m
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.perpustakaan:eureka-server >-------------------
+[INFO] Building eureka-server 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.5.0:clean (default-clean) @ eureka-server ---
+[INFO] Deleting D:\kuliah\semester_5\mk-microservice\perpustakaan-jenkin-ci-cd\eureka-server\target
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  0.315 s
+[INFO] Finished at: 2025-12-10T19:03:52+07:00
+[INFO] ------------------------------------------------------------------------
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.perpustakaan:eureka-server >-------------------
+[INFO] Building eureka-server 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ eureka-server ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ eureka-server ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 1 source file with javac [debug parameters release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ eureka-server ---
+[INFO] skip non existing resourceDirectory D:\kuliah\semester_5\mk-microservice\perpustakaan-jenkin-ci-cd\eureka-server\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ eureka-server ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [debug parameters release 17] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.5.4:test (default-test) @ eureka-server ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.4.2:jar (default-jar) @ eureka-server ---
+[INFO] Building jar: D:\kuliah\semester_5\mk-microservice\perpustakaan-jenkin-ci-cd\eureka-server\target\eureka-server-0.0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- spring-boot:4.0.0:repackage (repackage) @ eureka-server ---
+[INFO] Replacing main artifact D:\kuliah\semester_5\mk-microservice\perpustakaan-jenkin-ci-cd\eureka-server\target\eureka-server-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to D:\kuliah\semester_5\mk-microservice\perpustakaan-jenkin-ci-cd\eureka-server\target\eureka-server-0.0.1-SNAPSHOT.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.035 s
+[INFO] Finished at: 2025-12-10T19:03:57+07:00
+[INFO] ------------------------------------------------------------------------

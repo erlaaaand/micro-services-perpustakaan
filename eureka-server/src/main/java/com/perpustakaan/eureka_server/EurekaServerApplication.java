@@ -2,10 +2,10 @@ package com.perpustakaan.eureka_server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer; // 1. Pastikan baris ini ada
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer; 
 
 @SpringBootApplication
-@EnableEurekaServer // 2. Tambahkan anotasi ini agar aktif
+@EnableEurekaServer
 public class EurekaServerApplication {
 
 	public static void main(String[] args) {

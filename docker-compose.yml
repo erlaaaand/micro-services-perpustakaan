@@ -13,6 +13,11 @@ services:
       - "9411:9411"
     networks:
       - perpustakaan-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9411/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # --- Metrics Collection ---
   prometheus:
@@ -24,6 +29,11 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - perpustakaan-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # --- Visualization Dashboard ---
   grafana:
@@ -33,10 +43,12 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
     networks:
       - perpustakaan-network
 
@@ -60,6 +72,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.11.0
@@ -97,11 +110,14 @@ services:
   # 2. SERVICE DISCOVERY
   # ==========================================
   eureka-server:
-    build: ./perpustakaan-microservices/eureka-server
+    build: 
+      context: ./eureka-server
+      dockerfile: Dockerfile
     container_name: eureka-server
     ports:
       - "8761:8761"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
       - EUREKA_CLIENT_FETCH_REGISTRY=false
     networks:
@@ -111,97 +127,143 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
 
   # ==========================================
   # 3. API GATEWAY
   # ==========================================
   api-gateway:
-    build: ./api-gateway
+    build: 
+      context: ./api-gateway
+      dockerfile: Dockerfile
     container_name: api-gateway
     ports:
       - "8080:8080"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
       zipkin:
-        condition: service_started
+        condition: service_healthy
     networks:
       - perpustakaan-network
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # ==========================================
   # 4. MICROSERVICES
   # ==========================================
   service-anggota:
-    build: ./service-anggota
+    build: 
+      context: ./service-anggota
+      dockerfile: Dockerfile
     container_name: service-anggota
     ports:
       - "8081:8081"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
       zipkin:
-        condition: service_started
+        condition: service_healthy
     networks:
       - perpustakaan-network
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   service-buku:
-    build: ./service-buku
+    build: 
+      context: ./service-buku
+      dockerfile: Dockerfile
     container_name: service-buku
     ports:
       - "8082:8082"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
       zipkin:
-        condition: service_started
+        condition: service_healthy
     networks:
       - perpustakaan-network
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   service-peminjaman:
-    build: ./service-peminjaman
+    build: 
+      context: ./service-peminjaman
+      dockerfile: Dockerfile
     container_name: service-peminjaman
     ports:
       - "8083:8083"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
       zipkin:
-        condition: service_started
+        condition: service_healthy
     networks:
       - perpustakaan-network
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   service-pengembalian:
-    build: ./service-pengembalian
+    build: 
+      context: ./service-pengembalian
+      dockerfile: Dockerfile
     container_name: service-pengembalian
     ports:
       - "8084:8084"
     environment:
+      - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
       zipkin:
-        condition: service_started
+        condition: service_healthy
     networks:
       - perpustakaan-network
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 # ==========================================
 # NETWORKS & VOLUMES
