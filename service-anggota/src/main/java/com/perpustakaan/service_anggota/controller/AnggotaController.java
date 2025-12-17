@@ -28,4 +28,14 @@ public class AnggotaController {
     public List<Anggota> getAllAnggota() {
         return anggotaService.getAllAnggota();
     }
+
+    @PutMapping("/{id}")
+    public Anggota updateAnggota(@PathVariable("id") Long id, @RequestBody AnggotaRequest request) {
+        return anggotaService.updateAnggota(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteAnggota(@PathVariable("id") Long id) {
+        anggotaService.deleteAnggota(id);
+    }
 }
