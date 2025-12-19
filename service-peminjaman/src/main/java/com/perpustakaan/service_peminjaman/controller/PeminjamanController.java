@@ -10,6 +10,7 @@ import com.perpustakaan.service_peminjaman.dto.PeminjamanRequest;
 @RestController
 @RequestMapping("/api/peminjaman")
 public class PeminjamanController {
+    
     @Autowired
     private PeminjamanService peminjamanService;
 
@@ -18,8 +19,24 @@ public class PeminjamanController {
         return peminjamanService.savePeminjaman(request);
     }
 
+    // @GetMapping
+    // public List<Peminjaman> getPeminjaman() {
+    //     return peminjamanService.getAllPeminjaman();
+    // }
+
+
     @GetMapping("/{id}")
     public ResponseTemplateVO getPeminjaman(@PathVariable("id") Long id) {
         return peminjamanService.getPeminjaman(id);
     }
-}   
+
+    @PutMapping("/{id}")
+    public Peminjaman updatePeminjaman(@PathVariable("id") Long id, @RequestBody PeminjamanRequest request) {
+        return peminjamanService.updatePeminjaman(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deletePeminjaman(@PathVariable("id") Long id) {
+        peminjamanService.deletePeminjaman(id);
+    }
+}

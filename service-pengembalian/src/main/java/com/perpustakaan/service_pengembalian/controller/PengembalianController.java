@@ -23,4 +23,14 @@ public class PengembalianController {
     public ResponseTemplateVO getPengembalian(@PathVariable("id") Long id) {
         return pengembalianService.getPengembalian(id);
     }
+
+    @PutMapping("/{id}")
+    public Pengembalian updatePengembalian(@PathVariable("id") Long id, @RequestBody PengembalianRequest request) {
+        return pengembalianService.updatePengembalian(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deletePengembalian(@PathVariable("id") Long id) {
+        pengembalianService.deletePengembalian(id);
+    }
 }

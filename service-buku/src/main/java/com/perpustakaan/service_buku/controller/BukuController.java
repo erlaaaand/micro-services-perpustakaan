@@ -28,4 +28,14 @@ public class BukuController {
     public List<Buku> getAllBuku() {
         return bukuService.getAllBuku();
     }
+
+    @PutMapping("/{id}")
+    public Buku updateBuku(@PathVariable("id") Long id, @RequestBody BukuRequest request) {
+        return bukuService.updateBuku(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteBuku(@PathVariable("id") Long id) {
+        bukuService.deleteBuku(id);
+    }
 }
