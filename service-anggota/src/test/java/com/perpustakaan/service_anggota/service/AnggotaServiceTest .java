@@ -7,11 +7,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,6 +62,8 @@ class AnggotaServiceTest {
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getNomorAnggota()).isEqualTo("A001");
         assertThat(result.getNama()).isEqualTo("John Doe");
+        assertThat(result.getAlamat()).isEqualTo("Jl. Test No. 123");
+        assertThat(result.getEmail()).isEqualTo("john@test.com");
 
         verify(anggotaRepository, times(1)).findByNomorAnggota("A001");
         verify(anggotaRepository, times(1)).save(any(Anggota.class));
@@ -72,7 +76,8 @@ class AnggotaServiceTest {
 
         assertThatThrownBy(() -> anggotaService.saveAnggota(validRequest))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("Nomor anggota sudah digunakan");
+            .hasMessageContaining("Nomor anggota sudah digunakan")
+            .hasMessageContaining("A001");
 
         verify(anggotaRepository, times(1)).findByNomorAnggota("A001");
         verify(anggotaRepository, never()).save(any(Anggota.class));
@@ -88,6 +93,7 @@ class AnggotaServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getNama()).isEqualTo("John Doe");
+        assertThat(result.getNomorAnggota()).isEqualTo("A001");
 
         verify(anggotaRepository, times(1)).findById(1L);
     }
@@ -129,7 +135,7 @@ class AnggotaServiceTest {
     @Test
     @DisplayName("Should return empty list when no anggota exists")
     void testGetAllAnggota_EmptyList() {
-        when(anggotaRepository.findAll()).thenReturn(Arrays.asList());
+        when(anggotaRepository.findAll()).thenReturn(Collections.emptyList());
 
         List<Anggota> result = anggotaService.getAllAnggota();
 
@@ -161,10 +167,13 @@ class AnggotaServiceTest {
         Anggota result = anggotaService.updateAnggota(1L, updateRequest);
 
         assertThat(result).isNotNull();
+        assertThat(result.getNomorAnggota()).isEqualTo("A001-UPD");
         assertThat(result.getNama()).isEqualTo("John Updated");
+        assertThat(result.getAlamat()).isEqualTo("Jl. Updated");
         assertThat(result.getEmail()).isEqualTo("updated@test.com");
 
         verify(anggotaRepository, times(1)).findById(1L);
+        verify(anggotaRepository, times(1)).findByNomorAnggota("A001-UPD");
         verify(anggotaRepository, times(1)).save(any(Anggota.class));
     }
 
@@ -186,6 +195,7 @@ class AnggotaServiceTest {
         Anggota conflictAnggota = new Anggota();
         conflictAnggota.setId(2L);
         conflictAnggota.setNomorAnggota("A002");
+        conflictAnggota.setNama("Conflict User");
 
         AnggotaRequest updateRequest = new AnggotaRequest();
         updateRequest.setNomorAnggota("A002");
@@ -198,7 +208,8 @@ class AnggotaServiceTest {
 
         assertThatThrownBy(() -> anggotaService.updateAnggota(1L, updateRequest))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("Nomor anggota sudah digunakan");
+            .hasMessageContaining("Nomor anggota sudah digunakan")
+            .hasMessageContaining("A002");
 
         verify(anggotaRepository, times(1)).findById(1L);
         verify(anggotaRepository, times(1)).findByNomorAnggota("A002");
@@ -239,8 +250,56 @@ class AnggotaServiceTest {
         Anggota result = anggotaService.updateAnggota(1L, validRequest);
 
         assertThat(result).isNotNull();
+        assertThat(result.getNomorAnggota()).isEqualTo("A001");
+        
         verify(anggotaRepository, times(1)).findById(1L);
         verify(anggotaRepository, never()).findByNomorAnggota(anyString());
         verify(anggotaRepository, times(1)).save(any(Anggota.class));
+    }
+
+    @Test
+    @DisplayName("Should correctly map request to entity when saving")
+    void testSaveAnggota_CorrectMapping() {
+        when(anggotaRepository.findByNomorAnggota(anyString())).thenReturn(null);
+        when(anggotaRepository.save(any(Anggota.class))).thenReturn(validAnggota);
+
+        ArgumentCaptor<Anggota> anggotaCaptor = ArgumentCaptor.forClass(Anggota.class);
+
+        anggotaService.saveAnggota(validRequest);
+
+        verify(anggotaRepository).save(anggotaCaptor.capture());
+        Anggota capturedAnggota = anggotaCaptor.getValue();
+
+        assertThat(capturedAnggota.getNomorAnggota()).isEqualTo(validRequest.getNomorAnggota());
+        assertThat(capturedAnggota.getNama()).isEqualTo(validRequest.getNama());
+        assertThat(capturedAnggota.getAlamat()).isEqualTo(validRequest.getAlamat());
+        assertThat(capturedAnggota.getEmail()).isEqualTo(validRequest.getEmail());
+    }
+
+    @Test
+    @DisplayName("Should correctly update all fields")
+    void testUpdateAnggota_AllFieldsUpdated() {
+        AnggotaRequest updateRequest = new AnggotaRequest();
+        updateRequest.setNomorAnggota("A999");
+        updateRequest.setNama("Completely New");
+        updateRequest.setAlamat("New Address");
+        updateRequest.setEmail("new@test.com");
+
+        when(anggotaRepository.findById(1L)).thenReturn(Optional.of(validAnggota));
+        when(anggotaRepository.findByNomorAnggota("A999")).thenReturn(null);
+        when(anggotaRepository.save(any(Anggota.class))).thenAnswer(i -> i.getArgument(0));
+
+        ArgumentCaptor<Anggota> anggotaCaptor = ArgumentCaptor.forClass(Anggota.class);
+
+        anggotaService.updateAnggota(1L, updateRequest);
+
+        verify(anggotaRepository).save(anggotaCaptor.capture());
+        Anggota capturedAnggota = anggotaCaptor.getValue();
+
+        assertThat(capturedAnggota.getId()).isEqualTo(1L);
+        assertThat(capturedAnggota.getNomorAnggota()).isEqualTo("A999");
+        assertThat(capturedAnggota.getNama()).isEqualTo("Completely New");
+        assertThat(capturedAnggota.getAlamat()).isEqualTo("New Address");
+        assertThat(capturedAnggota.getEmail()).isEqualTo("new@test.com");
     }
 }
