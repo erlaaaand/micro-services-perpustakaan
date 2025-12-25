@@ -7,16 +7,26 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "peminjaman")
 public class Peminjaman {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Column(nullable = false)
     private Long anggotaId;
+
+    @Column(nullable = false)
     private Long bukuId;
+
+    @Column(nullable = false)
     private String tanggalPinjam;
+
+    @Column(nullable = false)
     private String tanggalKembali;
-    private String status; // "DIPINJAM" atau "KEMBALI"
+
+    @Column(nullable = false)
+    private String status;
 }
