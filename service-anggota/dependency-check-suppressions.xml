@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!-- 
+        Add CVE suppressions here if needed
+        Example:
+        <suppress>
+            <notes><![CDATA[
+                False positive or accepted risk
+            ]]></notes>
+            <cve>CVE-2021-12345</cve>
+        </suppress>
+    -->
+    
+    <!-- Spring Boot related suppressions (if needed) -->
+    <suppress>
+        <notes><![CDATA[
+            Spring Boot framework - managed by Spring team
+        ]]></notes>
+        <gav regex="true">^org\.springframework\.boot:.*$</gav>
+    </suppress>
+    
+    <!-- H2 Database - Development only -->
+    <suppress>
+        <notes><![CDATA[
+            H2 Database used only for development and testing
+        ]]></notes>
+        <gav regex="true">^com\.h2database:h2:.*$</gav>
+    </suppress>
+</suppressions>
