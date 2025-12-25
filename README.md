@@ -353,8 +353,6 @@ netstat -ano | findstr :8080
 
 ## 👥 Contributors
 
-- [Your Name]
+- Erland Agsya
 
-## 📄 License
-
-MIT License
+## OPEN SOURCE
