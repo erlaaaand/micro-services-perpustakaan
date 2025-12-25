@@ -3,40 +3,78 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      mvc:
-        routes:
-          # Route untuk Service Anggota
-          - id: service-anggota
-            uri: lb://service-anggota
-            predicates:
-              - Path=/api/anggota/**
-          
-          # Route untuk Service Buku
-          - id: service-buku
-            uri: lb://service-buku
-            predicates:
-              - Path=/api/buku/**
-          
-          # Route untuk Service Peminjaman
-          - id: service-peminjaman
-            uri: lb://service-peminjaman
-            predicates:
-              - Path=/api/peminjaman/**
-          
-          # Route untuk Service Pengembalian
-          - id: service-pengembalian
-            uri: lb://service-pengembalian
-            predicates:
-              - Path=/api/pengembalian/**
-          
-          # Route untuk Eureka Dashboard
-          - id: eureka-server
-            uri: http://eureka-server:8761
-            predicates:
-              - Path=/eureka/**
+      routes:
+        # Route untuk Service Anggota
+        - id: service-anggota
+          uri: lb://service-anggota
+          predicates:
+            - Path=/api/anggota/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: anggotaCircuitBreaker
+                fallbackUri: forward:/fallback
+        
+        # Route untuk Service Buku
+        - id: service-buku
+          uri: lb://service-buku
+          predicates:
+            - Path=/api/buku/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: bukuCircuitBreaker
+                fallbackUri: forward:/fallback
+        
+        # Route untuk Service Peminjaman
+        - id: service-peminjaman
+          uri: lb://service-peminjaman
+          predicates:
+            - Path=/api/peminjaman/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: peminjamanCircuitBreaker
+                fallbackUri: forward:/fallback
+        
+        # Route untuk Service Pengembalian
+        - id: service-pengembalian
+          uri: lb://service-pengembalian
+          predicates:
+            - Path=/api/pengembalian/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: pengembalianCircuitBreaker
+                fallbackUri: forward:/fallback
+      
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            maxAge: 3600
 
 server:
   port: 8080
+  compression:
+    enabled: true
+  http2:
+    enabled: true
 
 # Eureka Client Configuration
 eureka:
@@ -45,6 +83,14 @@ eureka:
       defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
     register-with-eureka: true
     fetch-registry: true
+    registry-fetch-interval-seconds: 30
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+    metadata-map:
+      management.port: ${server.port}
+      management.context-path: /actuator
 
 # Monitoring & Management
 management:
@@ -55,15 +101,70 @@ management:
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
   tracing:
     sampling:
       probability: 1.0
   zipkin:
     tracing:
       endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://localhost:9411/api/v2/spans}
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      anggotaCircuitBreaker:
+        baseConfig: default
+      bukuCircuitBreaker:
+        baseConfig: default
+      peminjamanCircuitBreaker:
+        baseConfig: default
+      pengembalianCircuitBreaker:
+        baseConfig: default
+  
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 5s
+    instances:
+      anggotaCircuitBreaker:
+        baseConfig: default
+      bukuCircuitBreaker:
+        baseConfig: default
+      peminjamanCircuitBreaker:
+        baseConfig: default
+      pengembalianCircuitBreaker:
+        baseConfig: default
 
 # Logging
 logging:
   level:
+    root: INFO
     org.springframework.cloud.gateway: DEBUG
     org.springframework.cloud.loadbalancer: DEBUG
+    com.perpustakaan: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
