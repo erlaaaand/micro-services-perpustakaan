@@ -28,13 +28,29 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing-key.pengembalian.deleted}")
     private String pengembalianDeletedKey;
 
-    // --- Listener Config (Milik Service Lain) ---
+    // --- Listener Config - Peminjaman ---
     @Value("${rabbitmq.exchange.peminjaman}")
     private String peminjamanExchange;
     
     @Value("${rabbitmq.queue.peminjaman-listener}")
     private String peminjamanListenerQueue;
 
+    // --- Listener Config - Anggota ---
+    @Value("${rabbitmq.exchange.anggota}")
+    private String anggotaExchange;
+    
+    @Value("${rabbitmq.queue.anggota-listener}")
+    private String anggotaListenerQueue;
+
+    // --- Listener Config - Buku ---
+    @Value("${rabbitmq.exchange.buku}")
+    private String bukuExchange;
+    
+    @Value("${rabbitmq.queue.buku-listener}")
+    private String bukuListenerQueue;
+
+    // ===== Publisher Beans =====
+    
     @Bean
     public TopicExchange pengembalianExchange() {
         return new TopicExchange(pengembalianExchange);
@@ -45,25 +61,29 @@ public class RabbitMQConfig {
         return new Queue(pengembalianQueue, true);
     }
     
-    // Binding untuk Created
     @Bean
     public Binding pengembalianCreatedBinding() {
-        return BindingBuilder.bind(pengembalianQueue()).to(pengembalianExchange()).with(pengembalianCreatedKey);
+        return BindingBuilder.bind(pengembalianQueue())
+            .to(pengembalianExchange())
+            .with(pengembalianCreatedKey);
     }
     
-    // Binding untuk Updated
     @Bean
     public Binding pengembalianUpdatedBinding() {
-        return BindingBuilder.bind(pengembalianQueue()).to(pengembalianExchange()).with(pengembalianUpdatedKey);
+        return BindingBuilder.bind(pengembalianQueue())
+            .to(pengembalianExchange())
+            .with(pengembalianUpdatedKey);
     }
 
-    // Binding untuk Deleted
     @Bean
     public Binding pengembalianDeletedBinding() {
-        return BindingBuilder.bind(pengembalianQueue()).to(pengembalianExchange()).with(pengembalianDeletedKey);
+        return BindingBuilder.bind(pengembalianQueue())
+            .to(pengembalianExchange())
+            .with(pengembalianDeletedKey);
     }
 
-    // --- Konfigurasi Listener Peminjaman ---
+    // ===== Listener Beans - Peminjaman =====
+    
     @Bean
     public TopicExchange peminjamanExchange() {
         return new TopicExchange(peminjamanExchange);
@@ -76,8 +96,50 @@ public class RabbitMQConfig {
 
     @Bean
     public Binding peminjamanListenerBinding() {
-        return BindingBuilder.bind(peminjamanListenerQueue()).to(peminjamanExchange()).with("peminjaman.#");
+        return BindingBuilder.bind(peminjamanListenerQueue())
+            .to(peminjamanExchange())
+            .with("peminjaman.#");
     }
+
+    // ===== Listener Beans - Anggota =====
+    
+    @Bean
+    public TopicExchange anggotaExchange() {
+        return new TopicExchange(anggotaExchange);
+    }
+
+    @Bean
+    public Queue anggotaListenerQueue() {
+        return new Queue(anggotaListenerQueue, true);
+    }
+
+    @Bean
+    public Binding anggotaListenerBinding() {
+        return BindingBuilder.bind(anggotaListenerQueue())
+            .to(anggotaExchange())
+            .with("anggota.#");
+    }
+
+    // ===== Listener Beans - Buku =====
+    
+    @Bean
+    public TopicExchange bukuExchange() {
+        return new TopicExchange(bukuExchange);
+    }
+
+    @Bean
+    public Queue bukuListenerQueue() {
+        return new Queue(bukuListenerQueue, true);
+    }
+
+    @Bean
+    public Binding bukuListenerBinding() {
+        return BindingBuilder.bind(bukuListenerQueue())
+            .to(bukuExchange())
+            .with("buku.#");
+    }
+
+    // ===== Common Beans =====
 
     @Bean
     public MessageConverter jsonMessageConverter() {
