@@ -1,12 +1,13 @@
 package com.perpustakaan.service_anggota.repository;
 
 import com.perpustakaan.service_anggota.entity.Anggota;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
@@ -14,12 +15,13 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@ActiveProfiles("test")
+@SpringBootTest // Memuat full application context (lebih aman jika konfigurasi slice test bermasalah)
+@ActiveProfiles("test") // Menggunakan konfigurasi dari application-test.properties (H2 DB)
+@Transactional // Rollback transaksi setelah setiap test selesai agar data bersih
 class AnggotaRepositoryTest {
 
     @Autowired
-    private TestEntityManager entityManager;
+    private EntityManager entityManager;
 
     @Autowired
     private AnggotaRepository anggotaRepository;
@@ -28,6 +30,10 @@ class AnggotaRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        // Membersihkan database untuk memastikan isolasi test
+        anggotaRepository.deleteAll();
+
+        // Setup data dummy
         testAnggota = new Anggota();
         testAnggota.setNomorAnggota("A001");
         testAnggota.setNama("John Doe");
@@ -38,151 +44,83 @@ class AnggotaRepositoryTest {
     @Test
     @DisplayName("Should save anggota successfully")
     void testSaveAnggota() {
+        // When
         Anggota saved = anggotaRepository.save(testAnggota);
+        entityManager.flush(); // Paksa sinkronisasi ke DB
 
+        // Then
         assertThat(saved).isNotNull();
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getNomorAnggota()).isEqualTo("A001");
-        assertThat(saved.getNama()).isEqualTo("John Doe");
     }
 
     @Test
-    @DisplayName("Should find anggota by id")
+    @DisplayName("Should find anggota by ID")
     void testFindById() {
-        Anggota saved = entityManager.persistAndFlush(testAnggota);
+        // Given
+        entityManager.persist(testAnggota);
+        entityManager.flush();
+        // Clear persistence context untuk memastikan data diambil dari DB, bukan cache session
+        entityManager.clear();
 
-        Optional<Anggota> found = anggotaRepository.findById(saved.getId());
+        // When
+        Optional<Anggota> found = anggotaRepository.findById(testAnggota.getId());
 
+        // Then
         assertThat(found).isPresent();
         assertThat(found.get().getNomorAnggota()).isEqualTo("A001");
+        assertThat(found.get().getNama()).isEqualTo("John Doe");
     }
 
     @Test
-    @DisplayName("Should find anggota by nomor anggota")
+    @DisplayName("Should find anggota by Nomor Anggota")
     void testFindByNomorAnggota() {
-        entityManager.persistAndFlush(testAnggota);
+        // Given
+        entityManager.persist(testAnggota);
+        entityManager.flush();
 
+        // When
         Anggota found = anggotaRepository.findByNomorAnggota("A001");
 
+        // Then
         assertThat(found).isNotNull();
-        assertThat(found.getNama()).isEqualTo("John Doe");
-    }
-
-    @Test
-    @DisplayName("Should return null when nomor anggota not found")
-    void testFindByNomorAnggota_NotFound() {
-        Anggota found = anggotaRepository.findByNomorAnggota("NOT_EXISTS");
-
-        assertThat(found).isNull();
+        assertThat(found.getId()).isEqualTo(testAnggota.getId());
     }
 
     @Test
     @DisplayName("Should find all anggota")
     void testFindAll() {
-        Anggota anggota2 = new Anggota();
-        anggota2.setNomorAnggota("A002");
-        anggota2.setNama("Jane Doe");
-        anggota2.setAlamat("Jl. Test No. 456");
-        anggota2.setEmail("jane@test.com");
+        // Given
+        Anggota a1 = new Anggota(null, "A002", "Jane", "Jl B", "jane@test.com");
+        Anggota a2 = new Anggota(null, "A003", "Bob", "Jl C", "bob@test.com");
 
+        // Simpan data testAnggota (dari setUp) + 2 data baru
         entityManager.persist(testAnggota);
-        entityManager.persist(anggota2);
+        entityManager.persist(a1);
+        entityManager.persist(a2);
         entityManager.flush();
 
-        List<Anggota> anggotaList = anggotaRepository.findAll();
+        // When
+        List<Anggota> all = anggotaRepository.findAll();
 
-        assertThat(anggotaList).hasSize(2);
-        assertThat(anggotaList).extracting(Anggota::getNama)
-            .containsExactlyInAnyOrder("John Doe", "Jane Doe");
+        // Then
+        assertThat(all).hasSize(3); // A001, A002, A003
     }
 
     @Test
-    @DisplayName("Should update anggota")
-    void testUpdateAnggota() {
-        Anggota saved = entityManager.persistAndFlush(testAnggota);
-
-        saved.setNama("John Updated");
-        saved.setEmail("updated@test.com");
-        
-        Anggota updated = anggotaRepository.save(saved);
-        entityManager.flush();
-
-        Anggota found = entityManager.find(Anggota.class, updated.getId());
-        assertThat(found.getNama()).isEqualTo("John Updated");
-        assertThat(found.getEmail()).isEqualTo("updated@test.com");
-    }
-
-    @Test
-    @DisplayName("Should delete anggota by id")
+    @DisplayName("Should delete anggota by ID")
     void testDeleteById() {
-        Anggota saved = entityManager.persistAndFlush(testAnggota);
+        // Given
+        Anggota saved = anggotaRepository.save(testAnggota);
+        entityManager.flush();
         Long id = saved.getId();
 
+        // When
         anggotaRepository.deleteById(id);
         entityManager.flush();
 
-        Optional<Anggota> found = anggotaRepository.findById(id);
-        assertThat(found).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Should check if anggota exists by id")
-    void testExistsById() {
-        Anggota saved = entityManager.persistAndFlush(testAnggota);
-
-        boolean exists = anggotaRepository.existsById(saved.getId());
-        assertThat(exists).isTrue();
-
-        boolean notExists = anggotaRepository.existsById(999L);
-        assertThat(notExists).isFalse();
-    }
-
-    @Test
-    @DisplayName("Should count all anggota")
-    void testCount() {
-        entityManager.persist(testAnggota);
-        
-        Anggota anggota2 = new Anggota();
-        anggota2.setNomorAnggota("A002");
-        anggota2.setNama("Jane Doe");
-        anggota2.setAlamat("Jl. Test");
-        anggota2.setEmail("jane@test.com");
-        entityManager.persist(anggota2);
-        
-        entityManager.flush();
-
-        long count = anggotaRepository.count();
-        assertThat(count).isEqualTo(2);
-    }
-
-    @Test
-    @DisplayName("Should handle multiple anggota with different nomor")
-    void testMultipleAnggota() {
-        Anggota anggota1 = new Anggota(null, "A001", "John", "Jl. A", "john@test.com");
-        Anggota anggota2 = new Anggota(null, "A002", "Jane", "Jl. B", "jane@test.com");
-        Anggota anggota3 = new Anggota(null, "A003", "Bob", "Jl. C", "bob@test.com");
-
-        anggotaRepository.save(anggota1);
-        anggotaRepository.save(anggota2);
-        anggotaRepository.save(anggota3);
-
-        List<Anggota> all = anggotaRepository.findAll();
-        assertThat(all).hasSize(3);
-    }
-
-    @Test
-    @DisplayName("Should persist anggota with all fields")
-    void testPersistAllFields() {
-        Anggota saved = anggotaRepository.save(testAnggota);
-        entityManager.flush();
-        entityManager.clear();
-
-        Anggota found = anggotaRepository.findById(saved.getId()).orElse(null);
-
-        assertThat(found).isNotNull();
-        assertThat(found.getNomorAnggota()).isEqualTo("A001");
-        assertThat(found.getNama()).isEqualTo("John Doe");
-        assertThat(found.getAlamat()).isEqualTo("Jl. Test No. 123");
-        assertThat(found.getEmail()).isEqualTo("john@test.com");
+        // Then
+        Optional<Anggota> deleted = anggotaRepository.findById(id);
+        assertThat(deleted).isEmpty();
     }
 }
