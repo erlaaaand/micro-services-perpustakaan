@@ -1,0 +1,74 @@
+# monitoring/prometheus/prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'perpustakaan-microservices'
+    environment: 'dev'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Eureka Server
+  - job_name: 'eureka-server'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['eureka-server:8761']
+        labels:
+          application: 'eureka-server'
+          service: 'infrastructure'
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          application: 'api-gateway'
+          service: 'gateway'
+
+  # Microservices
+  - job_name: 'microservices'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'service-anggota:8081'
+          - 'service-buku:8082'
+          - 'service-peminjaman:8083'
+          - 'service-pengembalian:8084'
+        labels:
+          group: 'microservices'
+
+  # Docker containers
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['host.docker.internal:9323']
+
+  # Elasticsearch
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+        labels:
+          application: 'elasticsearch'
+
+  # Logstash
+  - job_name: 'logstash'
+    static_configs:
+      - targets: ['logstash:9600']
+        labels:
+          application: 'logstash'

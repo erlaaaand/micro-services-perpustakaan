@@ -1,0 +1,99 @@
+# monitoring/filebeat/filebeat.yml
+filebeat.inputs:
+  # Docker container logs
+  - type: container
+    enabled: true
+    paths:
+      - '/var/lib/docker/containers/*/*.log'
+    
+    # Exclude some containers
+    exclude_lines: ['^DEBUG', '^TRACE']
+    
+    # Multiline pattern for Java stack traces
+    multiline.pattern: '^[[:space:]]+(at|\.{3})[[:space:]]+\b|^Caused by:'
+    multiline.negate: false
+    multiline.match: after
+    
+    # Processors
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+      
+      - decode_json_fields:
+          fields: ["message"]
+          target: "json"
+          overwrite_keys: true
+      
+      - add_cloud_metadata: ~
+      
+      - add_host_metadata: ~
+      
+      # Extract service name from container name
+      - dissect:
+          tokenizer: "%{container.name}"
+          field: "container.name"
+          target_prefix: "service"
+      
+      # Drop healthcheck logs
+      - drop_event:
+          when:
+            contains:
+              message: "/actuator/health"
+
+# Output to Logstash
+output.logstash:
+  hosts: ["logstash:5044"]
+  
+  # Load balancing
+  loadbalance: true
+  
+  # Connection settings
+  timeout: 15
+  max_retries: 3
+  
+  # Compression
+  compression_level: 3
+
+# Alternative: Direct output to Elasticsearch (comment out logstash output above)
+# output.elasticsearch:
+#   hosts: ["elasticsearch:9200"]
+#   indices:
+#     - index: "filebeat-perpustakaan-%{[agent.version]}-%{+yyyy.MM.dd}"
+#   pipeline: "filebeat-%{[agent.version]}-perpustakaan-pipeline"
+
+# Logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# Monitoring
+monitoring.enabled: true
+monitoring.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+
+# Setup
+setup.ilm.enabled: false
+setup.template.enabled: true
+setup.template.name: "filebeat-perpustakaan"
+setup.template.pattern: "filebeat-perpustakaan-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 1
+
+# Kibana dashboard setup
+setup.kibana:
+  host: "kibana:5601"
+  protocol: "http"
+
+# Processors
+processors:
+  - add_locale: ~
+  - add_fields:
+      target: ''
+      fields:
+        environment: dev
+        cluster: perpustakaan-microservices

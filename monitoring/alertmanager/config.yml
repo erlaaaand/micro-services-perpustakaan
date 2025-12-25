@@ -1,0 +1,108 @@
+# monitoring/alertmanager/config.yml
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@perpustakaan.com'
+  smtp_auth_username: 'alerts@perpustakaan.com'
+  smtp_auth_password: 'your-app-password'
+
+# Templates for notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route tree for notifications
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+  
+  routes:
+    # Critical alerts go to PagerDuty and Slack
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      continue: true
+    
+    # Warning alerts go to Slack
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      continue: true
+    
+    # Infrastructure alerts
+    - match:
+        service: infrastructure
+      receiver: 'infrastructure-team'
+
+# Notification receivers
+receivers:
+  - name: 'default'
+    email_configs:
+      - to: 'team@perpustakaan.com'
+        headers:
+          Subject: '[Perpustakaan] Alert: {{ .GroupLabels.alertname }}'
+        html: |
+          <!DOCTYPE html>
+          <html>
+          <body>
+            <h2>Alert: {{ .GroupLabels.alertname }}</h2>
+            <p><strong>Status:</strong> {{ .Status }}</p>
+            <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+            <h3>Firing Alerts:</h3>
+            <ul>
+            {{ range .Alerts.Firing }}
+              <li>
+                <strong>{{ .Labels.alertname }}</strong><br>
+                {{ .Annotations.summary }}<br>
+                {{ .Annotations.description }}
+              </li>
+            {{ end }}
+            </ul>
+          </body>
+          </html>
+
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'critical@perpustakaan.com'
+        send_resolved: true
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#critical-alerts'
+        title: '🚨 Critical Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Status:* {{ .Status }}
+          *Severity:* {{ .CommonLabels.severity }}
+          {{ range .Alerts.Firing }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  - name: 'warning-alerts'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#warnings'
+        title: '⚠️ Warning Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Status:* {{ .Status }}
+          {{ range .Alerts.Firing }}
+          *Summary:* {{ .Annotations.summary }}
+          {{ end }}
+
+  - name: 'infrastructure-team'
+    email_configs:
+      - to: 'infrastructure@perpustakaan.com'
+        send_resolved: true
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit warning if critical is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
