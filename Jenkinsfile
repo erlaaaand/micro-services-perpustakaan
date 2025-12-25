@@ -45,9 +45,12 @@ pipeline {
                     ║  📦 MICROSERVICES BUILD PIPELINE                         ║
                     ║  Version: ${BUILD_VERSION}                               ║
                     ║  Environment: ${params.ENVIRONMENT}                      ║
-                    ║  Branch: ${env.GIT_BRANCH}                               ║
+                    ║  Branch: ${env.GIT_BRANCH ?: 'N/A'}                     ║
                     ╚═══════════════════════════════════════════════════════════╝
                     """
+                    
+                    // Set environment variable for deployment
+                    env.TARGET_ENV = params.ENVIRONMENT
                 }
             }
         }
@@ -57,7 +60,10 @@ pipeline {
                 echo '📦 Pulling source code...'
                 checkout scm
                 script {
-                    env.GIT_BRANCH = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+                    env.GIT_BRANCH = sh(
+                        returnStdout: true, 
+                        script: 'git rev-parse --abbrev-ref HEAD'
+                    ).trim()
                     echo "Building branch: ${env.GIT_BRANCH}"
                 }
             }
@@ -173,19 +179,39 @@ pipeline {
             steps {
                 script {
                     echo '🔒 Running OWASP dependency check...'
-                    try {
-                        sh """
-                            mvn org.owasp:dependency-check-maven:check \
-                                -DfailBuildOnCVSS=7 \
-                                -DsuppressionFiles=**/dependency-check-suppressions.xml \
-                                -DautoUpdate=true
-                        """
-                    } catch (Exception e) {
-                        echo "⚠️ Security scan found vulnerabilities: ${e.message}"
+                    def services = SERVICES.split(',')
+                    def failedScans = []
+                    
+                    services.each { service ->
+                        try {
+                            dir(service) {
+                                sh """
+                                    mvn org.owasp:dependency-check-maven:check \
+                                        -DfailBuildOnCVSS=7 \
+                                        -DsuppressionFiles=dependency-check-suppressions.xml \
+                                        -DautoUpdate=true
+                                """
+                            }
+                        } catch (Exception e) {
+                            echo "⚠️ Security scan found vulnerabilities in ${service}: ${e.message}"
+                            failedScans.add(service)
+                        }
+                    }
+                    
+                    if (failedScans.size() > 0) {
+                        echo "⚠️ Security vulnerabilities found in: ${failedScans.join(', ')}"
                         currentBuild.result = 'UNSTABLE'
                     }
                     
-                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                    // Publish reports
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '**/target',
+                        reportFiles: 'dependency-check-report.html',
+                        reportName: 'OWASP Dependency Check'
+                    ])
                 }
             }
         }
@@ -253,7 +279,7 @@ pipeline {
                             sh """
                                 docker push perpus/${service}:${BUILD_VERSION}
                                 docker push perpus/${service}:latest
-                                docker push perpus/${service}:${ENVIRONMENT}
+                                docker push perpus/${service}:${env.TARGET_ENV}
                             """
                         }
                     }
@@ -267,16 +293,34 @@ pipeline {
             }
             steps {
                 script {
-                    echo "🚀 Deploying to ${ENVIRONMENT} environment..."
+                    echo "🚀 Deploying to ${env.TARGET_ENV} environment..."
+                    
+                    // Create .env file with environment-specific variables
+                    sh """
+                        cat > .env << EOF
+ENVIRONMENT=${env.TARGET_ENV}
+BUILD_VERSION=${BUILD_VERSION}
+RABBITMQ_DEFAULT_USER=admin
+RABBITMQ_DEFAULT_PASS=admin123
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+EUREKA_SERVER_URL=http://eureka-server:8761/eureka/
+ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+ELASTICSEARCH_HOST=elasticsearch
+ELASTICSEARCH_PORT=9200
+LOGSTASH_HOST=logstash
+LOGSTASH_PORT=5000
+EOF
+                    """
                     
                     // Stop existing containers
                     sh """
-                        docker-compose -f docker-compose.yml -f docker-compose.${ENVIRONMENT}.yml down || true
+                        docker-compose -f docker-compose.dev.yml down || true
                     """
                     
                     // Start new containers
                     sh """
-                        docker-compose -f docker-compose.yml -f docker-compose.${ENVIRONMENT}.yml up -d
+                        docker-compose -f docker-compose.dev.yml up -d
                     """
                     
                     echo "✅ Deployment completed"
@@ -331,15 +375,22 @@ pipeline {
                     echo '🧪 Running smoke tests...'
                     
                     def tests = [
-                        'Swagger UI': 'http://localhost:8081/swagger-ui.html',
-                        'Actuator Health': 'http://localhost:8081/actuator/health',
-                        'Eureka Dashboard': 'http://localhost:8761',
-                        'API Gateway': 'http://localhost:8080/actuator/health'
+                        'API Gateway Health': 'http://localhost:8080/actuator/health',
+                        'Service Anggota Health': 'http://localhost:8081/actuator/health',
+                        'Service Buku Health': 'http://localhost:8082/actuator/health',
+                        'Service Peminjaman Health': 'http://localhost:8083/actuator/health',
+                        'Service Pengembalian Health': 'http://localhost:8084/actuator/health',
+                        'Eureka Dashboard': 'http://localhost:8761/actuator/health'
                     ]
                     
                     tests.each { name, url ->
-                        sh "curl -f ${url} || exit 1"
-                        echo "✅ ${name} is accessible"
+                        try {
+                            sh "curl -f ${url} || exit 1"
+                            echo "✅ ${name} is accessible"
+                        } catch (Exception e) {
+                            echo "❌ ${name} failed: ${e.message}"
+                            currentBuild.result = 'UNSTABLE'
+                        }
                     }
                 }
             }
@@ -350,31 +401,21 @@ pipeline {
                 script {
                     echo '📚 Generating documentation and reports...'
                     
-                    // Generate API documentation
-                    sh '''
-                        mkdir -p api-docs
-                        
-                        # Download OpenAPI specs
-                        curl -f http://localhost:8081/api-docs -o api-docs/service-anggota-openapi.json || true
-                        curl -f http://localhost:8082/api-docs -o api-docs/service-buku-openapi.json || true
-                        curl -f http://localhost:8083/api-docs -o api-docs/service-peminjaman-openapi.json || true
-                        curl -f http://localhost:8084/api-docs -o api-docs/service-pengembalian-openapi.json || true
-                    '''
+                    // Archive test results
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
                     
-                    archiveArtifacts artifacts: 'api-docs/**/*.json', fingerprint: true, allowEmptyArchive: true
+                    // Publish JaCoCo coverage reports
+                    jacoco(
+                        execPattern: '**/target/jacoco.exec',
+                        classPattern: '**/target/classes',
+                        sourcePattern: '**/src/main/java',
+                        exclusionPattern: '**/test/**'
+                    )
                     
-                    // Publish test results
-                    junit '**/target/surefire-reports/*.xml'
+                    // Archive artifacts
+                    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true, allowEmptyArchive: true
                     
-                    // Publish coverage reports
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '**/target/site/jacoco',
-                        reportFiles: 'index.html',
-                        reportName: 'JaCoCo Coverage Report'
-                    ])
+                    echo "✅ Reports generated successfully"
                 }
             }
         }
@@ -384,12 +425,6 @@ pipeline {
         always {
             script {
                 echo '🧹 Cleaning up...'
-                
-                // Publish reports
-                junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                
-                // Clean workspace
-                cleanWs()
                 
                 // Send notifications
                 sendNotification(currentBuild.result ?: 'SUCCESS')
@@ -407,7 +442,8 @@ pipeline {
     }
 }
 
-// Helper Functions
+// ===== Helper Functions =====
+
 def buildAndTestService(String serviceName) {
     dir(serviceName) {
         echo "🔨 Building ${serviceName}..."
@@ -419,14 +455,6 @@ def buildAndTestService(String serviceName) {
                     -B -V
                 mvn jacoco:report
             '''
-            
-            junit '**/target/surefire-reports/*.xml'
-            
-            jacoco(
-                execPattern: '**/target/jacoco.exec',
-                classPattern: '**/target/classes',
-                sourcePattern: '**/src/main/java'
-            )
             
             echo "✅ ${serviceName} built successfully"
         } catch (Exception e) {
@@ -442,7 +470,7 @@ def buildDockerImage(String serviceName) {
         
         def image = docker.build("perpus/${serviceName}:${BUILD_VERSION}")
         image.tag('latest')
-        image.tag(env.ENVIRONMENT)
+        image.tag(env.TARGET_ENV)
         
         echo "✅ Docker image built: perpus/${serviceName}:${BUILD_VERSION}"
     }
@@ -472,44 +500,48 @@ def sendNotification(String status) {
     def color = status == 'SUCCESS' ? 'good' : (status == 'UNSTABLE' ? 'warning' : 'danger')
     def emoji = status == 'SUCCESS' ? '✅' : (status == 'UNSTABLE' ? '⚠️' : '❌')
     
-    emailext(
-        subject: "${emoji} Build ${status}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-        body: """
-            <h2>Build Information</h2>
-            <ul>
-                <li><strong>Pipeline:</strong> ${env.JOB_NAME}</li>
-                <li><strong>Build:</strong> #${env.BUILD_NUMBER}</li>
-                <li><strong>Version:</strong> ${BUILD_VERSION}</li>
-                <li><strong>Environment:</strong> ${params.ENVIRONMENT}</li>
-                <li><strong>Status:</strong> ${status}</li>
-                <li><strong>Duration:</strong> ${currentBuild.durationString}</li>
-            </ul>
-            
-            <h3>Services:</h3>
-            <ul>
-                <li><a href="http://localhost:8761">Eureka Dashboard</a></li>
-                <li><a href="http://localhost:8080">API Gateway</a></li>
-                <li><a href="http://localhost:8081/swagger-ui.html">Service Anggota</a></li>
-                <li><a href="http://localhost:8082/swagger-ui.html">Service Buku</a></li>
-                <li><a href="http://localhost:8083/swagger-ui.html">Service Peminjaman</a></li>
-                <li><a href="http://localhost:8084/swagger-ui.html">Service Pengembalian</a></li>
-            </ul>
-            
-            <h3>Monitoring:</h3>
-            <ul>
-                <li><a href="http://localhost:9090">Prometheus</a></li>
-                <li><a href="http://localhost:3000">Grafana</a></li>
-                <li><a href="http://localhost:9411">Zipkin</a></li>
-                <li><a href="http://localhost:5601">Kibana</a></li>
-            </ul>
-            
-            <p><a href="${env.BUILD_URL}">View Console Output</a></p>
-        """,
-        to: 'team@perpustakaan.com',
-        mimeType: 'text/html'
-    )
+    try {
+        emailext(
+            subject: "${emoji} Build ${status}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            body: """
+                <h2>Build Information</h2>
+                <ul>
+                    <li><strong>Pipeline:</strong> ${env.JOB_NAME}</li>
+                    <li><strong>Build:</strong> #${env.BUILD_NUMBER}</li>
+                    <li><strong>Version:</strong> ${BUILD_VERSION}</li>
+                    <li><strong>Environment:</strong> ${env.TARGET_ENV}</li>
+                    <li><strong>Status:</strong> ${status}</li>
+                    <li><strong>Duration:</strong> ${currentBuild.durationString}</li>
+                </ul>
+                
+                <h3>Services:</h3>
+                <ul>
+                    <li><a href="http://localhost:8761">Eureka Dashboard</a></li>
+                    <li><a href="http://localhost:8080/actuator/health">API Gateway</a></li>
+                    <li><a href="http://localhost:8081/swagger-ui.html">Service Anggota</a></li>
+                    <li><a href="http://localhost:8082/swagger-ui.html">Service Buku</a></li>
+                    <li><a href="http://localhost:8083/swagger-ui.html">Service Peminjaman</a></li>
+                    <li><a href="http://localhost:8084/swagger-ui.html">Service Pengembalian</a></li>
+                </ul>
+                
+                <h3>Monitoring:</h3>
+                <ul>
+                    <li><a href="http://localhost:9090">Prometheus</a></li>
+                    <li><a href="http://localhost:3000">Grafana</a></li>
+                    <li><a href="http://localhost:9411">Zipkin</a></li>
+                    <li><a href="http://localhost:5601">Kibana</a></li>
+                </ul>
+                
+                <p><a href="${env.BUILD_URL}">View Console Output</a></p>
+            """,
+            to: 'team@perpustakaan.com',
+            mimeType: 'text/html'
+        )
+    } catch (Exception e) {
+        echo "Could not send email notification: ${e.message}"
+    }
     
-    // Slack notification (if configured)
+    // Slack notification
     try {
         slackSend(
             channel: SLACK_CHANNEL,
@@ -519,7 +551,7 @@ def sendNotification(String status) {
                 Job: ${env.JOB_NAME}
                 Build: #${env.BUILD_NUMBER}
                 Version: ${BUILD_VERSION}
-                Environment: ${params.ENVIRONMENT}
+                Environment: ${env.TARGET_ENV}
                 <${env.BUILD_URL}|View Details>
             """
         )
