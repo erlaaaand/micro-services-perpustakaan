@@ -2,10 +2,15 @@ package com.perpustakaan.service_anggota.cqrs.handler;
 
 import com.perpustakaan.service_anggota.cqrs.command.*;
 import com.perpustakaan.service_anggota.entity.Anggota;
+import com.perpustakaan.service_anggota.event.AnggotaCreatedEvent;
+import com.perpustakaan.service_anggota.event.AnggotaDeletedEvent;
+import com.perpustakaan.service_anggota.event.AnggotaUpdatedEvent;
 import com.perpustakaan.service_anggota.repository.AnggotaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +23,21 @@ public class AnggotaCommandHandler {
     
     @Autowired
     private AnggotaRepository anggotaRepository;
+    
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+    
+    @Value("${rabbitmq.exchange.anggota}")
+    private String anggotaExchange;
+    
+    @Value("${rabbitmq.routing-key.anggota.created}")
+    private String anggotaCreatedRoutingKey;
+    
+    @Value("${rabbitmq.routing-key.anggota.updated}")
+    private String anggotaUpdatedRoutingKey;
+    
+    @Value("${rabbitmq.routing-key.anggota.deleted}")
+    private String anggotaDeletedRoutingKey;
     
     @Transactional
     public Anggota handle(CreateAnggotaCommand command) {
@@ -37,6 +57,9 @@ public class AnggotaCommandHandler {
         
         Anggota saved = anggotaRepository.save(anggota);
         logger.info("Successfully created anggota with ID: {}", saved.getId());
+        
+        // Publish event
+        publishAnggotaCreatedEvent(saved);
         
         return saved;
     }
@@ -68,6 +91,9 @@ public class AnggotaCommandHandler {
         Anggota updated = anggotaRepository.save(anggota);
         logger.info("Successfully updated anggota with ID: {}", updated.getId());
         
+        // Publish event
+        publishAnggotaUpdatedEvent(updated);
+        
         return updated;
     }
     
@@ -81,5 +107,50 @@ public class AnggotaCommandHandler {
         
         anggotaRepository.deleteById(command.getId());
         logger.info("Successfully deleted anggota with ID: {}", command.getId());
+        
+        // Publish event
+        publishAnggotaDeletedEvent(command.getId());
+    }
+    
+    private void publishAnggotaCreatedEvent(Anggota anggota) {
+        try {
+            AnggotaCreatedEvent event = new AnggotaCreatedEvent(
+                anggota.getId(),
+                anggota.getNomorAnggota(),
+                anggota.getNama(),
+                anggota.getAlamat(),
+                anggota.getEmail()
+            );
+            rabbitTemplate.convertAndSend(anggotaExchange, anggotaCreatedRoutingKey, event);
+            logger.info("Published AnggotaCreatedEvent for ID: {}", anggota.getId());
+        } catch (Exception e) {
+            logger.error("Failed to publish AnggotaCreatedEvent", e);
+        }
+    }
+    
+    private void publishAnggotaUpdatedEvent(Anggota anggota) {
+        try {
+            AnggotaUpdatedEvent event = new AnggotaUpdatedEvent(
+                anggota.getId(),
+                anggota.getNomorAnggota(),
+                anggota.getNama(),
+                anggota.getAlamat(),
+                anggota.getEmail()
+            );
+            rabbitTemplate.convertAndSend(anggotaExchange, anggotaUpdatedRoutingKey, event);
+            logger.info("Published AnggotaUpdatedEvent for ID: {}", anggota.getId());
+        } catch (Exception e) {
+            logger.error("Failed to publish AnggotaUpdatedEvent", e);
+        }
+    }
+    
+    private void publishAnggotaDeletedEvent(Long id) {
+        try {
+            AnggotaDeletedEvent event = new AnggotaDeletedEvent(id);
+            rabbitTemplate.convertAndSend(anggotaExchange, anggotaDeletedRoutingKey, event);
+            logger.info("Published AnggotaDeletedEvent for ID: {}", id);
+        } catch (Exception e) {
+            logger.error("Failed to publish AnggotaDeletedEvent", e);
+        }
     }
 }
