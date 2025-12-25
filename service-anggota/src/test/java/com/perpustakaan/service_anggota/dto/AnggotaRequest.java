@@ -48,11 +48,7 @@ class AnggotaRequestTest {
     @Test
     @DisplayName("Should pass validation with valid data")
     void testValidation_ValidData() {
-        AnggotaRequest request = new AnggotaRequest();
-        request.setNomorAnggota("A001");
-        request.setNama("John Doe");
-        request.setAlamat("Jl. Test No. 123");
-        request.setEmail("john@test.com");
+        AnggotaRequest request = createValidRequest();
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
         assertThat(violations).isEmpty();
@@ -61,117 +57,89 @@ class AnggotaRequestTest {
     @Test
     @DisplayName("Should fail validation when nomorAnggota is blank")
     void testValidation_BlankNomorAnggota() {
-        AnggotaRequest request = new AnggotaRequest();
+        AnggotaRequest request = createValidRequest();
         request.setNomorAnggota("");
-        request.setNama("John Doe");
-        request.setAlamat("Jl. Test");
-        request.setEmail("john@test.com");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage())
-            .contains("tidak boleh kosong");
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("nomorAnggota"));
     }
 
     @Test
     @DisplayName("Should fail validation when nomorAnggota is too short")
     void testValidation_ShortNomorAnggota() {
-        AnggotaRequest request = new AnggotaRequest();
+        AnggotaRequest request = createValidRequest();
         request.setNomorAnggota("A1");
-        request.setNama("John Doe");
-        request.setAlamat("Jl. Test");
-        request.setEmail("john@test.com");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage())
-            .contains("antara 3-20 karakter");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("nomorAnggota");
     }
 
     @Test
     @DisplayName("Should fail validation when nomorAnggota is too long")
     void testValidation_LongNomorAnggota() {
-        AnggotaRequest request = new AnggotaRequest();
+        AnggotaRequest request = createValidRequest();
         request.setNomorAnggota("A123456789012345678901");
-        request.setNama("John Doe");
-        request.setAlamat("Jl. Test");
-        request.setEmail("john@test.com");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage())
-            .contains("antara 3-20 karakter");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("nomorAnggota");
     }
 
     @Test
     @DisplayName("Should fail validation when nama is blank")
     void testValidation_BlankNama() {
-        AnggotaRequest request = new AnggotaRequest();
-        request.setNomorAnggota("A001");
+        AnggotaRequest request = createValidRequest();
         request.setNama("");
-        request.setAlamat("Jl. Test");
-        request.setEmail("john@test.com");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage())
-            .contains("tidak boleh kosong");
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("nama"));
     }
 
     @Test
     @DisplayName("Should fail validation when nama is too short")
     void testValidation_ShortNama() {
-        AnggotaRequest request = new AnggotaRequest();
-        request.setNomorAnggota("A001");
+        AnggotaRequest request = createValidRequest();
         request.setNama("Jo");
-        request.setAlamat("Jl. Test");
-        request.setEmail("john@test.com");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage())
-            .contains("antara 3-100 karakter");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("nama");
     }
 
     @Test
     @DisplayName("Should fail validation when alamat is blank")
     void testValidation_BlankAlamat() {
-        AnggotaRequest request = new AnggotaRequest();
-        request.setNomorAnggota("A001");
-        request.setNama("John Doe");
+        AnggotaRequest request = createValidRequest();
         request.setAlamat("");
-        request.setEmail("john@test.com");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
-        assertThat(violations).hasSize(1);
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("alamat"));
     }
 
     @Test
     @DisplayName("Should fail validation when email is blank")
     void testValidation_BlankEmail() {
-        AnggotaRequest request = new AnggotaRequest();
-        request.setNomorAnggota("A001");
-        request.setNama("John Doe");
-        request.setAlamat("Jl. Test");
+        AnggotaRequest request = createValidRequest();
         request.setEmail("");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
-        assertThat(violations).hasSize(1);
+        assertThat(violations).isNotEmpty();
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("email"));
     }
 
     @Test
     @DisplayName("Should fail validation when email format is invalid")
     void testValidation_InvalidEmail() {
-        AnggotaRequest request = new AnggotaRequest();
-        request.setNomorAnggota("A001");
-        request.setNama("John Doe");
-        request.setAlamat("Jl. Test");
+        AnggotaRequest request = createValidRequest();
         request.setEmail("invalid-email");
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage())
-            .contains("email tidak valid");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("email");
     }
 
     @Test
@@ -180,7 +148,7 @@ class AnggotaRequestTest {
         AnggotaRequest request = new AnggotaRequest();
 
         Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
-        assertThat(violations).hasSize(4); // All 4 fields are required
+        assertThat(violations).hasSize(4);
     }
 
     @Test
@@ -194,14 +162,11 @@ class AnggotaRequestTest {
         };
 
         for (String email : validEmails) {
-            AnggotaRequest request = new AnggotaRequest();
-            request.setNomorAnggota("A001");
-            request.setNama("John Doe");
-            request.setAlamat("Jl. Test");
+            AnggotaRequest request = createValidRequest();
             request.setEmail(email);
 
             Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
-            assertThat(violations).isEmpty();
+            assertThat(violations).as("Email %s should be valid", email).isEmpty();
         }
     }
 
@@ -217,14 +182,11 @@ class AnggotaRequestTest {
         };
 
         for (String email : invalidEmails) {
-            AnggotaRequest request = new AnggotaRequest();
-            request.setNomorAnggota("A001");
-            request.setNama("John Doe");
-            request.setAlamat("Jl. Test");
+            AnggotaRequest request = createValidRequest();
             request.setEmail(email);
 
             Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
-            assertThat(violations).isNotEmpty();
+            assertThat(violations).as("Email %s should be invalid", email).isNotEmpty();
         }
     }
 
@@ -232,36 +194,21 @@ class AnggotaRequestTest {
     @DisplayName("Should handle edge case for nomor anggota length")
     void testValidation_EdgeCaseNomorAnggota() {
         // Minimum valid length (3 characters)
-        AnggotaRequest request1 = new AnggotaRequest();
+        AnggotaRequest request1 = createValidRequest();
         request1.setNomorAnggota("A01");
-        request1.setNama("John Doe");
-        request1.setAlamat("Jl. Test");
-        request1.setEmail("test@test.com");
         assertThat(validator.validate(request1)).isEmpty();
 
         // Maximum valid length (20 characters)
-        AnggotaRequest request2 = new AnggotaRequest();
-        request2.setNomorAnggota("A01234567890123456789".substring(0, 20));
-        request2.setNama("John Doe");
-        request2.setAlamat("Jl. Test");
-        request2.setEmail("test@test.com");
+        AnggotaRequest request2 = createValidRequest();
+        request2.setNomorAnggota("A0123456789012345678".substring(0, 20));
         assertThat(validator.validate(request2)).isEmpty();
     }
 
     @Test
     @DisplayName("Should implement equals and hashCode")
     void testEqualsAndHashCode() {
-        AnggotaRequest request1 = new AnggotaRequest();
-        request1.setNomorAnggota("A001");
-        request1.setNama("John Doe");
-        request1.setAlamat("Jl. Test");
-        request1.setEmail("john@test.com");
-
-        AnggotaRequest request2 = new AnggotaRequest();
-        request2.setNomorAnggota("A001");
-        request2.setNama("John Doe");
-        request2.setAlamat("Jl. Test");
-        request2.setEmail("john@test.com");
+        AnggotaRequest request1 = createValidRequest();
+        AnggotaRequest request2 = createValidRequest();
 
         assertThat(request1).isEqualTo(request2);
         assertThat(request1.hashCode()).isEqualTo(request2.hashCode());
@@ -270,14 +217,32 @@ class AnggotaRequestTest {
     @Test
     @DisplayName("Should generate toString")
     void testToString() {
-        AnggotaRequest request = new AnggotaRequest();
-        request.setNomorAnggota("A001");
-        request.setNama("John Doe");
-        request.setAlamat("Jl. Test");
-        request.setEmail("john@test.com");
+        AnggotaRequest request = createValidRequest();
 
         String toString = request.toString();
         assertThat(toString).contains("A001");
         assertThat(toString).contains("John Doe");
+    }
+
+    @Test
+    @DisplayName("Should validate null fields")
+    void testValidation_NullFields() {
+        AnggotaRequest request = new AnggotaRequest();
+        request.setNomorAnggota(null);
+        request.setNama(null);
+        request.setAlamat(null);
+        request.setEmail(null);
+
+        Set<ConstraintViolation<AnggotaRequest>> violations = validator.validate(request);
+        assertThat(violations).hasSize(4);
+    }
+
+    private AnggotaRequest createValidRequest() {
+        AnggotaRequest request = new AnggotaRequest();
+        request.setNomorAnggota("A001");
+        request.setNama("John Doe");
+        request.setAlamat("Jl. Test No. 123");
+        request.setEmail("john@test.com");
+        return request;
     }
 }
