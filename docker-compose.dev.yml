@@ -70,7 +70,7 @@ services:
       - bootstrap.memory_lock=true
       - xpack.security.enabled=false
       - xpack.security.enrollment.enabled=false
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "ES_JAVA_OPTS=${ES_JAVA_OPTS:-Xms1g -Xmx1g}"
     ulimits:
       memlock:
         soft: -1
@@ -111,8 +111,9 @@ services:
       - "5000:5000/udp"
       - "9600:9600"
     environment:
-      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - "LS_JAVA_OPTS=${LS_JAVA_OPTS:-Xmx512m -Xms512m}"
+      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOSTS:-http://elasticsearch:9200}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -131,7 +132,7 @@ services:
     ports:
       - "5601:5601"
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOSTS:-http://elasticsearch:9200}
       - SERVER_NAME=kibana
       - SERVER_HOST=0.0.0.0
     volumes:
@@ -168,6 +169,7 @@ services:
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
     networks:
       - perpustakaan-network
     healthcheck:
@@ -242,7 +244,7 @@ services:
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
       - EUREKA_CLIENT_FETCH_REGISTRY=false
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - JAVA_OPTS=${JAVA_OPTS_GATEWAY:-Xmx512m -Xms256m}
     networks:
       - perpustakaan-network
     healthcheck:
@@ -271,11 +273,11 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - LOGSTASH_HOST=logstash
-      - LOGSTASH_PORT=5000
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
+      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
+      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
+      - JAVA_OPTS=${JAVA_OPTS_GATEWAY:-Xmx512m -Xms256m}
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -311,15 +313,15 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
+      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=logstash
-      - LOGSTASH_PORT=5000
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
+      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
+      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -354,15 +356,15 @@ services:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
+      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=logstash
-      - LOGSTASH_PORT=5000
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
+      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
+      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -397,15 +399,15 @@ services:
       - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
+      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=logstash
-      - LOGSTASH_PORT=5000
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
+      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
+      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -444,15 +446,15 @@ services:
       - "8084:8084"
     environment:
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
+      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=logstash
-      - LOGSTASH_PORT=5000
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
+      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
+      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -487,7 +489,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.25.0.0/16
+        - subnet: ${NETWORK_SUBNET:-172.25.0.0/16}
 
 volumes:
   rabbitmq-data:

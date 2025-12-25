@@ -9,9 +9,9 @@
 
     <!-- Logstash Appender -->
     <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>${LOGSTASH_HOST:logstash}:${LOGSTASH_PORT:5000}</destination>
+        <destination>${LOGSTASH_HOST:-logstash}:${LOGSTASH_PORT:-5000}</destination>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <customFields>{"app_name":"${spring.application.name:api-gateway}"}</customFields>
+            <customFields>{"app_name":"api-gateway"}</customFields>
         </encoder>
         <!-- Fallback to console if Logstash is unavailable -->
         <connectionTimeout>5000</connectionTimeout>
