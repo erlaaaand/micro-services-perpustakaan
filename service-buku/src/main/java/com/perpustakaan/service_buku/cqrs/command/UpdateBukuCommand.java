@@ -9,8 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UpdateBukuCommand {
     private Long id;
-    private String nomorAnggota;
-    private String nama;
-    private String alamat;
-    private String email;
+    private String kodeBuku;
+    private String judul;
+    // Diubah dari penulis -> pengarang agar konsisten
+    private String pengarang;
+    private String penerbit;
+    private Integer tahunTerbit;
 }
