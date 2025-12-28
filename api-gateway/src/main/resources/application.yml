@@ -1,9 +1,20 @@
+# Fixed API Gateway Configuration
+# Spring Cloud Gateway Server MVC Compatible
+
 spring:
   application:
     name: api-gateway
+  
+  # Spring Cloud Gateway MVC Configuration
   cloud:
     gateway:
-      mvc: # PERBAIKAN: Menggunakan namespace 'mvc' untuk Gateway Server MVC
+      mvc:
+        # HTTP Timeouts
+        http-client:
+          connect-timeout: 5000
+          response-timeout: 30s
+        
+        # Routes Configuration
         routes:
           # Route untuk Service Anggota
           - id: service-anggota
@@ -11,10 +22,17 @@ spring:
             predicates:
               - Path=/api/anggota/**
             filters:
-              - name: CircuitBreaker
+              - StripPrefix=0
+              - name: Retry
                 args:
-                  name: anggotaCircuitBreaker
-                  fallbackUri: forward:/fallback
+                  retries: 3
+                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                  methods: GET,POST,PUT,DELETE
+                  backoff:
+                    firstBackoff: 50ms
+                    maxBackoff: 500ms
+                    factor: 2
+                    basedOnPreviousValue: false
         
           # Route untuk Service Buku
           - id: service-buku
@@ -22,10 +40,16 @@ spring:
             predicates:
               - Path=/api/buku/**
             filters:
-              - name: CircuitBreaker
+              - StripPrefix=0
+              - name: Retry
                 args:
-                  name: bukuCircuitBreaker
-                  fallbackUri: forward:/fallback
+                  retries: 3
+                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                  methods: GET,POST,PUT,DELETE
+                  backoff:
+                    firstBackoff: 50ms
+                    maxBackoff: 500ms
+                    factor: 2
         
           # Route untuk Service Peminjaman
           - id: service-peminjaman
@@ -33,10 +57,16 @@ spring:
             predicates:
               - Path=/api/peminjaman/**
             filters:
-              - name: CircuitBreaker
+              - StripPrefix=0
+              - name: Retry
                 args:
-                  name: peminjamanCircuitBreaker
-                  fallbackUri: forward:/fallback
+                  retries: 3
+                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                  methods: GET,POST,PUT,DELETE
+                  backoff:
+                    firstBackoff: 50ms
+                    maxBackoff: 500ms
+                    factor: 2
         
           # Route untuk Service Pengembalian
           - id: service-pengembalian
@@ -44,72 +74,108 @@ spring:
             predicates:
               - Path=/api/pengembalian/**
             filters:
-              - name: CircuitBreaker
+              - StripPrefix=0
+              - name: Retry
                 args:
-                  name: pengembalianCircuitBreaker
-                  fallbackUri: forward:/fallback
-      
-      # Catatan: 'discovery.locator' (auto routes) dan 'globalcors' dari Reactive Gateway 
-      # seringkali tidak kompatibel langsung dengan MVC Gateway, jadi kita gunakan konfigurasi eksplisit.
+                  retries: 3
+                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                  methods: GET,POST,PUT,DELETE
+                  backoff:
+                    firstBackoff: 50ms
+                    maxBackoff: 500ms
+                    factor: 2
+    
+    # Load Balancer Configuration
+    loadbalancer:
+      ribbon:
+        enabled: false
+      cache:
+        enabled: true
+        ttl: 5s
+        capacity: 256
 
 server:
   port: 8080
   compression:
     enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
   http2:
     enabled: true
+  shutdown: graceful
+
+# Spring Lifecycle
+spring.lifecycle.timeout-per-shutdown-phase: 30s
 
 # Eureka Client Configuration
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://eureka-server:8761/eureka/}
     register-with-eureka: true
     fetch-registry: true
-    registry-fetch-interval-seconds: 30
+    registry-fetch-interval-seconds: 10
+    eureka-server-connect-timeout-seconds: 15
+    eureka-server-read-timeout-seconds: 15
   instance:
-    prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
-    lease-expiration-duration-in-seconds: 90
+    prefer-ip-address: false
+    hostname: api-gateway
+    instance-id: ${spring.application.name}:${random.value}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
     metadata-map:
       management.port: ${server.port}
       management.context-path: /actuator
+      zone: zone1
 
 # Monitoring & Management
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics,gateway
+        include: health,info,prometheus,metrics,gateway,env,loggers
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
       probes:
         enabled: true
+    gateway:
+      enabled: true
   health:
     livenessState:
       enabled: true
     readinessState:
+      enabled: true
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
       enabled: true
   tracing:
     sampling:
       probability: 1.0
   zipkin:
     tracing:
-      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://localhost:9411/api/v2/spans}
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://zipkin:9411/api/v2/spans}
   metrics:
     tags:
       application: ${spring.application.name}
+      environment: ${ENVIRONMENT:dev}
     export:
       prometheus:
         enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s,2s
 
-# Resilience4j Configuration (Tetap sama, kompatibel dengan MVC)
+# Resilience4j Configuration untuk MVC Gateway
 resilience4j:
   circuitbreaker:
     configs:
       default:
         registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
         permittedNumberOfCallsInHalfOpenState: 3
@@ -117,6 +183,12 @@ resilience4j:
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
         eventConsumerBufferSize: 10
+        recordExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
     instances:
       anggotaCircuitBreaker:
         baseConfig: default
@@ -131,6 +203,7 @@ resilience4j:
     configs:
       default:
         timeoutDuration: 5s
+        cancelRunningFuture: true
     instances:
       anggotaCircuitBreaker:
         baseConfig: default
@@ -140,15 +213,42 @@ resilience4j:
         baseConfig: default
       pengembalianCircuitBreaker:
         baseConfig: default
+  
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - java.io.IOException
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+    instances:
+      anggotaRetry:
+        baseConfig: default
+      bukuRetry:
+        baseConfig: default
+      peminjamanRetry:
+        baseConfig: default
+      pengembalianRetry:
+        baseConfig: default
 
 # Logging
 logging:
   level:
     root: INFO
-    # Logger untuk Spring Cloud Gateway MVC
     org.springframework.cloud.gateway.server.mvc: DEBUG
     org.springframework.cloud.loadbalancer: DEBUG
+    org.springframework.web: INFO
     com.perpustakaan: DEBUG
+    io.github.resilience4j: DEBUG
   pattern:
-    console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+  file:
+    name: logs/api-gateway.log
+    max-size: 10MB
+    max-history: 30
