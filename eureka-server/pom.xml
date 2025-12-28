@@ -35,18 +35,26 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-micrometer-tracing-brave</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-zipkin</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-tracing-bridge-brave</artifactId>
 		</dependency>
+		<dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
+        </dependency>
+
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
@@ -58,32 +66,38 @@
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+
 		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-registry-prometheus</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-micrometer-tracing-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>net.logstash.logback</groupId>
 			<artifactId>logstash-logback-encoder</artifactId>
 			<version>7.4</version>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-zipkin-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -98,11 +112,39 @@
 
 	<build>
 		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-devtools</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven Surefire Plugin untuk testing -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>false</skipTests>
+                </configuration>
+            </plugin>
+        </plugins>
 	</build>
 
 </project>
