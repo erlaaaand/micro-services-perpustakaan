@@ -3,71 +3,54 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      routes:
-        # Route untuk Service Anggota
-        - id: service-anggota
-          uri: lb://service-anggota
-          predicates:
-            - Path=/api/anggota/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: anggotaCircuitBreaker
-                fallbackUri: forward:/fallback
+      mvc: # PERBAIKAN: Menggunakan namespace 'mvc' untuk Gateway Server MVC
+        routes:
+          # Route untuk Service Anggota
+          - id: service-anggota
+            uri: lb://service-anggota
+            predicates:
+              - Path=/api/anggota/**
+            filters:
+              - name: CircuitBreaker
+                args:
+                  name: anggotaCircuitBreaker
+                  fallbackUri: forward:/fallback
         
-        # Route untuk Service Buku
-        - id: service-buku
-          uri: lb://service-buku
-          predicates:
-            - Path=/api/buku/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: bukuCircuitBreaker
-                fallbackUri: forward:/fallback
+          # Route untuk Service Buku
+          - id: service-buku
+            uri: lb://service-buku
+            predicates:
+              - Path=/api/buku/**
+            filters:
+              - name: CircuitBreaker
+                args:
+                  name: bukuCircuitBreaker
+                  fallbackUri: forward:/fallback
         
-        # Route untuk Service Peminjaman
-        - id: service-peminjaman
-          uri: lb://service-peminjaman
-          predicates:
-            - Path=/api/peminjaman/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: peminjamanCircuitBreaker
-                fallbackUri: forward:/fallback
+          # Route untuk Service Peminjaman
+          - id: service-peminjaman
+            uri: lb://service-peminjaman
+            predicates:
+              - Path=/api/peminjaman/**
+            filters:
+              - name: CircuitBreaker
+                args:
+                  name: peminjamanCircuitBreaker
+                  fallbackUri: forward:/fallback
         
-        # Route untuk Service Pengembalian
-        - id: service-pengembalian
-          uri: lb://service-pengembalian
-          predicates:
-            - Path=/api/pengembalian/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: pengembalianCircuitBreaker
-                fallbackUri: forward:/fallback
+          # Route untuk Service Pengembalian
+          - id: service-pengembalian
+            uri: lb://service-pengembalian
+            predicates:
+              - Path=/api/pengembalian/**
+            filters:
+              - name: CircuitBreaker
+                args:
+                  name: pengembalianCircuitBreaker
+                  fallbackUri: forward:/fallback
       
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-      
-      globalcors:
-        corsConfigurations:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
-            allowedHeaders: "*"
-            maxAge: 3600
+      # Catatan: 'discovery.locator' (auto routes) dan 'globalcors' dari Reactive Gateway 
+      # seringkali tidak kompatibel langsung dengan MVC Gateway, jadi kita gunakan konfigurasi eksplisit.
 
 server:
   port: 8080
@@ -121,7 +104,7 @@ management:
       prometheus:
         enabled: true
 
-# Resilience4j Configuration
+# Resilience4j Configuration (Tetap sama, kompatibel dengan MVC)
 resilience4j:
   circuitbreaker:
     configs:
@@ -162,7 +145,8 @@ resilience4j:
 logging:
   level:
     root: INFO
-    org.springframework.cloud.gateway: DEBUG
+    # Logger untuk Spring Cloud Gateway MVC
+    org.springframework.cloud.gateway.server.mvc: DEBUG
     org.springframework.cloud.loadbalancer: DEBUG
     com.perpustakaan: DEBUG
   pattern:
