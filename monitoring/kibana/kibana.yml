@@ -12,12 +12,6 @@ elasticsearch.pingTimeout: 30000
 monitoring.ui.container.elasticsearch.enabled: true
 monitoring.kibana.collection.enabled: false
 
-# Logging
-logging.dest: stdout
-logging.silent: false
-logging.quiet: false
-logging.verbose: false
-
 # UI Settings
 i18n.locale: "en"
 
