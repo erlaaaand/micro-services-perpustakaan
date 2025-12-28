@@ -21,7 +21,9 @@
 
     <properties>
         <java.version>17</java.version>
-        <spring-cloud.version>2025.1.0</spring-cloud.version>  <!-- CHANGED -->
+        <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <springdoc.version>2.2.0</springdoc.version>
+        <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
     </properties>
 
     <dependencyManagement>
@@ -77,7 +79,7 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.5.0</version>
+            <version>${springdoc.version}</version>
         </dependency>
 
         <!-- Logging -->
