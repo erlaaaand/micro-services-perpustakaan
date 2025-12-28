@@ -8,28 +8,22 @@ services:
     image: rabbitmq:3.12-management-alpine
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # AMQP port
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-admin}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - RABBITMQ_DEFAULT_VHOST=/
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 40s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # ==========================================
   # 2. DISTRIBUTED TRACING - Zipkin
@@ -39,27 +33,19 @@ services:
     container_name: zipkin
     ports:
       - "9411:9411"
-    environment:
-      - STORAGE_TYPE=mem
     networks:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9411/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 30s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # ==========================================
   # 3. ELK STACK
   # ==========================================
-  
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
     container_name: elasticsearch
@@ -69,18 +55,13 @@ services:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - xpack.security.enabled=false
-      - xpack.security.enrollment.enabled=false
-      - "ES_JAVA_OPTS=${ES_JAVA_OPTS:-Xms1g -Xmx1g}"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
         soft: -1
         hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
     ports:
       - "9200:9200"
-      - "9300:9300"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     networks:
@@ -92,11 +73,6 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.11.0
@@ -104,27 +80,18 @@ services:
     volumes:
       - ./monitoring/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
       - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline
-      - ./monitoring/logstash/patterns:/usr/share/logstash/patterns
     ports:
       - "5044:5044"
-      - "5000:5000/tcp"
-      - "5000:5000/udp"
-      - "9600:9600"
+      - "5000:5000"
     environment:
-      - "LS_JAVA_OPTS=${LS_JAVA_OPTS:-Xmx512m -Xms512m}"
-      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOSTS:-http://elasticsearch:9200}
-      - ENVIRONMENT=${ENVIRONMENT:-dev}
+      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
       elasticsearch:
         condition: service_healthy
     networks:
       - perpustakaan-network
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.0
@@ -132,28 +99,19 @@ services:
     ports:
       - "5601:5601"
     environment:
-      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOSTS:-http://elasticsearch:9200}
-      - SERVER_NAME=kibana
-      - SERVER_HOST=0.0.0.0
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     volumes:
       - ./monitoring/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
-      - kibana-data:/usr/share/kibana/data
     depends_on:
       elasticsearch:
         condition: service_healthy
     networks:
       - perpustakaan-network
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # ==========================================
   # 4. MONITORING STACK
   # ==========================================
-  
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -166,43 +124,15 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
-      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+      - '--storage.tsdb.retention.time=15d'
     networks:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: alertmanager
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./monitoring/alertmanager/config.yml:/etc/alertmanager/config.yml
-      - alertmanager-data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/config.yml'
-      - '--storage.path=/alertmanager'
-    networks:
-      - perpustakaan-network
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   grafana:
     image: grafana/grafana:latest
@@ -210,74 +140,59 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
     depends_on:
-      prometheus:
-        condition: service_healthy
+      - prometheus
     networks:
       - perpustakaan-network
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # ==========================================
   # 5. SERVICE DISCOVERY - Eureka Server
   # ==========================================
   eureka-server:
-    build: 
+    build:
       context: ./eureka-server
       dockerfile: Dockerfile
-    image: perpus/eureka-server:${BUILD_VERSION:-latest}
+    image: perpus/eureka-server:latest
     container_name: eureka-server
     ports:
       - "8761:8761"
     environment:
-      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
-      - EUREKA_CLIENT_FETCH_REGISTRY=false
-      - JAVA_OPTS=${JAVA_OPTS_GATEWAY:-Xmx512m -Xms256m}
+      - SPRING_PROFILES_ACTIVE=dev
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     networks:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 15
+      start_period: 90s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # ==========================================
   # 6. API GATEWAY
   # ==========================================
   api-gateway:
-    build: 
+    build:
       context: ./api-gateway
       dockerfile: Dockerfile
-    image: perpus/api-gateway:${BUILD_VERSION:-latest}
+    image: perpus/api-gateway:latest
     container_name: api-gateway
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
-      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
-      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
-      - JAVA_OPTS=${JAVA_OPTS_GATEWAY:-Xmx512m -Xms256m}
+      - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5000
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -289,39 +204,34 @@ services:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 15
+      start_period: 90s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # ==========================================
   # 7. MICROSERVICES
   # ==========================================
   service-anggota:
-    build: 
+    build:
       context: ./service-anggota
       dockerfile: Dockerfile
-    image: perpus/service-anggota:${BUILD_VERSION:-latest}
+    image: perpus/service-anggota:latest
     container_name: service-anggota
     ports:
       - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
-      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
-      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
-      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
-      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
+      - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5000
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -329,42 +239,35 @@ services:
         condition: service_healthy
       zipkin:
         condition: service_healthy
-      logstash:
-        condition: service_started
     networks:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 15
+      start_period: 90s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   service-buku:
-    build: 
+    build:
       context: ./service-buku
       dockerfile: Dockerfile
-    image: perpus/service-buku:${BUILD_VERSION:-latest}
+    image: perpus/service-buku:latest
     container_name: service-buku
     ports:
       - "8082:8082"
     environment:
-      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
-      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
-      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
-      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
-      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
+      - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5000
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -372,42 +275,35 @@ services:
         condition: service_healthy
       zipkin:
         condition: service_healthy
-      logstash:
-        condition: service_started
     networks:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 15
+      start_period: 90s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   service-peminjaman:
-    build: 
+    build:
       context: ./service-peminjaman
       dockerfile: Dockerfile
-    image: perpus/service-peminjaman:${BUILD_VERSION:-latest}
+    image: perpus/service-peminjaman:latest
     container_name: service-peminjaman
     ports:
       - "8083:8083"
     environment:
-      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
-      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
-      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
-      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
-      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
+      - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5000
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -415,8 +311,6 @@ services:
         condition: service_healthy
       zipkin:
         condition: service_healthy
-      logstash:
-        condition: service_started
       service-anggota:
         condition: service_healthy
       service-buku:
@@ -425,36 +319,31 @@ services:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 15
+      start_period: 90s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   service-pengembalian:
-    build: 
+    build:
       context: ./service-pengembalian
       dockerfile: Dockerfile
-    image: perpus/service-pengembalian:${BUILD_VERSION:-latest}
+    image: perpus/service-pengembalian:latest
     container_name: service-pengembalian
     ports:
       - "8084:8084"
     environment:
-      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-dev}
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_SERVER_URL:-http://eureka-server:8761/eureka/}
-      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=${ZIPKIN_URL:-http://zipkin:9411/api/v2/spans}
-      - SPRING_RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
-      - SPRING_RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
-      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_DEFAULT_USER:-admin}
-      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_DEFAULT_PASS:-admin123}
-      - LOGSTASH_HOST=${LOGSTASH_HOST:-logstash}
-      - LOGSTASH_PORT=${LOGSTASH_PORT:-5000}
-      - JAVA_OPTS=${JAVA_OPTS_SERVICE:-Xmx512m -Xms256m}
+      - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5000
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -462,24 +351,17 @@ services:
         condition: service_healthy
       zipkin:
         condition: service_healthy
-      logstash:
-        condition: service_started
       service-peminjaman:
         condition: service_healthy
     networks:
       - perpustakaan-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 15
+      start_period: 90s
     restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 # ==========================================
 # NETWORKS & VOLUMES
@@ -487,20 +369,9 @@ services:
 networks:
   perpustakaan-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: ${NETWORK_SUBNET:-172.25.0.0/16}
 
 volumes:
   rabbitmq-data:
-    driver: local
   elasticsearch-data:
-    driver: local
-  kibana-data:
-    driver: local
   prometheus-data:
-    driver: local
   grafana-data:
-    driver: local
-  alertmanager-data:
-    driver: local
