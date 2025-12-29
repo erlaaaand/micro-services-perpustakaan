@@ -519,15 +519,10 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     container_name: alertmanager
-    hostname: alertmanager
     ports:
       - "9093:9093"
     volumes:
-      - ./monitoring/alertmanager:/etc/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/config.yml'
-    depends_on:
-      - prometheus
+      - ./monitoring/alertmanager/config.yml:/etc/alertmanager/config.yml:ro
     networks:
       - perpustakaan-network
     restart: unless-stopped
