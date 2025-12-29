@@ -4,7 +4,8 @@ import com.perpustakaan.service_pengembalian.cqrs.command.*;
 import com.perpustakaan.service_pengembalian.cqrs.handler.*;
 import com.perpustakaan.service_pengembalian.cqrs.query.*;
 import com.perpustakaan.service_pengembalian.dto.PengembalianRequest;
-import com.perpustakaan.service_pengembalian.entity.Pengembalian;
+import com.perpustakaan.service_pengembalian.entity.command.Pengembalian;
+import com.perpustakaan.service_pengembalian.entity.query.PengembalianReadModel; // Import baru
 import com.perpustakaan.service_pengembalian.vo.ResponseTemplateVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,7 +28,7 @@ public class PengembalianController {
     private PengembalianQueryHandler queryHandler;
 
     @PostMapping
-    @Operation(summary = "Create Pengembalian", description = "Record a returned book")
+    @Operation(summary = "Create Pengembalian")
     public ResponseEntity<Pengembalian> createPengembalian(@Valid @RequestBody PengembalianRequest request) {
         CreatePengembalianCommand command = new CreatePengembalianCommand(
             request.getPeminjamanId(),
@@ -40,7 +41,7 @@ public class PengembalianController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Pengembalian By ID", description = "Get return details including loan info")
+    @Operation(summary = "Get Pengembalian By ID")
     public ResponseEntity<ResponseTemplateVO> getPengembalian(@PathVariable("id") Long id) {
         GetPengembalianByIdQuery query = new GetPengembalianByIdQuery(id);
         ResponseTemplateVO response = queryHandler.handle(query);
@@ -52,8 +53,8 @@ public class PengembalianController {
     }
 
     @GetMapping
-    @Operation(summary = "Get All Pengembalian", description = "Get all return records with pagination")
-    public ResponseEntity<Page<Pengembalian>> getAllPengembalian(
+    @Operation(summary = "Get All Pengembalian")
+    public ResponseEntity<Page<PengembalianReadModel>> getAllPengembalian(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
         
@@ -62,7 +63,7 @@ public class PengembalianController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update Pengembalian", description = "Update return record")
+    @Operation(summary = "Update Pengembalian")
     public ResponseEntity<Pengembalian> updatePengembalian(
             @PathVariable("id") Long id, 
             @Valid @RequestBody PengembalianRequest request) {
@@ -84,7 +85,7 @@ public class PengembalianController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Pengembalian", description = "Delete return record")
+    @Operation(summary = "Delete Pengembalian")
     public ResponseEntity<Void> deletePengembalian(@PathVariable("id") Long id) {
         DeletePengembalianCommand command = new DeletePengembalianCommand(id);
         try {

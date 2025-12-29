@@ -1,6 +1,6 @@
 package com.perpustakaan.service_pengembalian.vo;
 
-import com.perpustakaan.service_pengembalian.entity.Pengembalian;
+import com.perpustakaan.service_pengembalian.entity.query.PengembalianReadModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ResponseTemplateVO {
-    private Pengembalian pengembalian;
-    private Peminjaman peminjaman;
+    private PengembalianReadModel pengembalian; // Mongo Model
+    private Peminjaman peminjaman; // VO dari Service Peminjaman
 }

@@ -1,8 +1,8 @@
 package com.perpustakaan.service_pengembalian.cqrs.handler;
 
 import com.perpustakaan.service_pengembalian.cqrs.query.*;
-import com.perpustakaan.service_pengembalian.entity.Pengembalian;
-import com.perpustakaan.service_pengembalian.repository.PengembalianRepository;
+import com.perpustakaan.service_pengembalian.entity.query.PengembalianReadModel;
+import com.perpustakaan.service_pengembalian.repository.query.PengembalianQueryRepository;
 import com.perpustakaan.service_pengembalian.vo.Peminjaman;
 import com.perpustakaan.service_pengembalian.vo.ResponseTemplateVO;
 import org.slf4j.Logger;
@@ -13,7 +13,6 @@ import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -25,7 +24,7 @@ public class PengembalianQueryHandler {
     private static final Logger logger = LoggerFactory.getLogger(PengembalianQueryHandler.class);
 
     @Autowired
-    private PengembalianRepository pengembalianRepository;
+    private PengembalianQueryRepository pengembalianRepository; // Mongo Read Repo
 
     @Autowired
     private RestTemplate restTemplate;
@@ -33,24 +32,25 @@ public class PengembalianQueryHandler {
     @Autowired
     private DiscoveryClient discoveryClient;
 
-    @Transactional(readOnly = true)
     public ResponseTemplateVO handle(GetPengembalianByIdQuery query) {
-        Optional<Pengembalian> pengembalianOpt = pengembalianRepository.findById(query.getId());
-        if (!pengembalianOpt.isPresent()) {
+        Optional<PengembalianReadModel> pengembalianOpt = pengembalianRepository.findById(query.getId());
+        if (pengembalianOpt.isEmpty()) {
             return null;
         }
 
-        Pengembalian pengembalian = pengembalianOpt.get();
+        PengembalianReadModel pengembalian = pengembalianOpt.get();
         ResponseTemplateVO vo = new ResponseTemplateVO();
         vo.setPengembalian(pengembalian);
 
         try {
             String peminjamanUrl = getServiceUrl("service-peminjaman");
-            Peminjaman peminjaman = restTemplate.getForObject(
-                peminjamanUrl + "/api/peminjaman/" + pengembalian.getPeminjamanId(),
-                Peminjaman.class
-            );
-            vo.setPeminjaman(peminjaman);
+            if (peminjamanUrl != null) {
+                Peminjaman peminjaman = restTemplate.getForObject(
+                    peminjamanUrl + "/api/peminjaman/" + pengembalian.getPeminjamanId(),
+                    Peminjaman.class
+                );
+                vo.setPeminjaman(peminjaman);
+            }
         } catch (Exception e) {
             logger.warn("Gagal mengambil data Peminjaman: {}", e.getMessage());
         }
@@ -58,8 +58,7 @@ public class PengembalianQueryHandler {
         return vo;
     }
 
-    @Transactional(readOnly = true)
-    public Page<Pengembalian> handle(GetAllPengembalianQuery query) {
+    public Page<PengembalianReadModel> handle(GetAllPengembalianQuery query) {
         PageRequest pageRequest = PageRequest.of(query.getPage(), query.getSize());
         return pengembalianRepository.findAll(pageRequest);
     }
@@ -69,6 +68,6 @@ public class PengembalianQueryHandler {
         if (instances != null && !instances.isEmpty()) {
             return instances.get(0).getUri().toString();
         }
-        throw new RuntimeException("Service " + serviceName + " not found");
+        return null;
     }
 }
