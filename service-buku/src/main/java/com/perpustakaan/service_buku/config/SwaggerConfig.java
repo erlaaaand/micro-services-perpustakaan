@@ -10,7 +10,6 @@ import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
-
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
@@ -22,7 +21,6 @@ public class SwaggerConfig {
                                 .name("Perpustakaan Team")
                                 .email("team@perpustakaan.com")))
                 .servers(List.of(
-                        new Server().url("http://localhost:8082").description("Direct Access"),
                         new Server().url("http://localhost:8080").description("Via Gateway")
                 ));
     }

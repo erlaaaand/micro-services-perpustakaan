@@ -1,16 +1,20 @@
-package com.perpustakaan.service_buku.entity;
+package com.perpustakaan.service_buku.entity.query;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
+@Document(collection = "buku_read")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "buku")
-public class Buku {
+public class BukuReadModel {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

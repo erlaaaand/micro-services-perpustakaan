@@ -4,7 +4,9 @@ import com.perpustakaan.service_buku.cqrs.command.*;
 import com.perpustakaan.service_buku.cqrs.handler.*;
 import com.perpustakaan.service_buku.cqrs.query.*;
 import com.perpustakaan.service_buku.dto.BukuRequest;
-import com.perpustakaan.service_buku.entity.Buku;
+import com.perpustakaan.service_buku.entity.command.Buku; // Entity Write (H2)
+import com.perpustakaan.service_buku.entity.query.BukuReadModel; // Entity Read (Mongo) - PENTING
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,6 +31,8 @@ public class BukuController {
     @Autowired
     private BukuQueryHandler queryHandler;
 
+    // --- COMMAND (WRITE) Mengembalikan Entity H2 (Buku) ---
+
     @PostMapping
     @Operation(summary = "Create new book", description = "Creates a new book in the library")
     public ResponseEntity<Buku> createBuku(@Valid @RequestBody BukuRequest request) {
@@ -44,37 +48,6 @@ public class BukuController {
         
         Buku saved = commandHandler.handle(command);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Get book by ID", description = "Retrieves a book by its ID")
-    public ResponseEntity<Buku> getBukuById(@PathVariable("id") Long id) {
-        logger.info("Fetching buku with ID: {}", id);
-        
-        GetBukuByIdQuery query = new GetBukuByIdQuery(id);
-        Buku buku = queryHandler.handle(query);
-        
-        if (buku != null) {
-            return ResponseEntity.ok(buku);
-        }
-        
-        logger.warn("Buku with ID {} not found", id);
-        return ResponseEntity.notFound().build();
-    }
-
-    @GetMapping
-    @Operation(summary = "Get all books", description = "Retrieves all books with pagination")
-    public ResponseEntity<Page<Buku>> getAllBuku(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(defaultValue = "id") String sortBy) {
-        
-        logger.info("Fetching all buku - page: {}, size: {}", page, size);
-        
-        GetAllBukuQuery query = new GetAllBukuQuery(page, size, sortBy);
-        Page<Buku> bukuPage = queryHandler.handle(query);
-        
-        return ResponseEntity.ok(bukuPage);
     }
 
     @PutMapping("/{id}")
@@ -94,7 +67,6 @@ public class BukuController {
             request.getTahunTerbit()
         );
         
-        // Exception akan ditangani oleh GlobalExceptionHandler (return 400 Bad Request)
         Buku updated = commandHandler.handle(command);
         return ResponseEntity.ok(updated);
     }
@@ -108,5 +80,40 @@ public class BukuController {
         
         commandHandler.handle(command);
         return ResponseEntity.noContent().build();
+    }
+
+    // --- QUERY (READ) Mengembalikan ReadModel Mongo (BukuReadModel) ---
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get book by ID", description = "Retrieves a book by its ID")
+    public ResponseEntity<BukuReadModel> getBukuById(@PathVariable("id") Long id) {
+        logger.info("Fetching buku with ID: {}", id);
+        
+        GetBukuByIdQuery query = new GetBukuByIdQuery(id);
+        // Handler sekarang mengembalikan BukuReadModel
+        BukuReadModel buku = queryHandler.handle(query); 
+        
+        if (buku != null) {
+            return ResponseEntity.ok(buku);
+        }
+        
+        logger.warn("Buku with ID {} not found", id);
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping
+    @Operation(summary = "Get all books", description = "Retrieves all books with pagination")
+    public ResponseEntity<Page<BukuReadModel>> getAllBuku(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "id") String sortBy) {
+        
+        logger.info("Fetching all buku - page: {}, size: {}", page, size);
+        
+        GetAllBukuQuery query = new GetAllBukuQuery(page, size, sortBy);
+        // Handler sekarang mengembalikan Page<BukuReadModel>
+        Page<BukuReadModel> bukuPage = queryHandler.handle(query);
+        
+        return ResponseEntity.ok(bukuPage);
     }
 }
