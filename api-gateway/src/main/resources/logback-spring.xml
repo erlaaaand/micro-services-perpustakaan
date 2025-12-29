@@ -1,31 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
+    <!-- Property untuk host Logstash dengan fallback -->
+    <springProperty scope="context" name="logstashHost" source="LOGSTASH_HOST" defaultValue="localhost"/>
+    <springProperty scope="context" name="logstashPort" source="LOGSTASH_PORT" defaultValue="5000"/>
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="unknown"/>
+
+    <!-- Console Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>
-                %d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
-            </pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
+    <!-- Logstash Appender dengan error handling -->
     <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>localhost:5000</destination>
+        <destination>${logstashHost}:${logstashPort}</destination>
         
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <customFields>{"app_name":"api-gateway"}</customFields>
+            <customFields>{"app_name":"${appName}"}</customFields>
         </encoder>
+        
+        <!-- Configuration untuk handle connection issues -->
         <connectionTimeout>5000</connectionTimeout>
         <keepAliveDuration>5 minutes</keepAliveDuration>
+        <reconnectionDelay>10 seconds</reconnectionDelay>
+        
+        <!-- Jangan block aplikasi jika Logstash down -->
+        <queueSize>512</queueSize>
+        <includeCallerData>false</includeCallerData>
     </appender>
 
+    <!-- Async wrapper untuk Logstash agar tidak block main thread -->
+    <appender name="ASYNC_LOGSTASH" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="LOGSTASH"/>
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <!-- Root Logger -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="LOGSTASH"/>
+        <appender-ref ref="ASYNC_LOGSTASH"/>
     </root>
 
+    <!-- Application Logger -->
     <logger name="com.perpustakaan" level="DEBUG"/>
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.cloud" level="DEBUG"/>
+    
+    <!-- Kurangi noise dari logstash connector -->
+    <logger name="net.logstash.logback" level="WARN"/>
 
 </configuration>
