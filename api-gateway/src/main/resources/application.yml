@@ -1,5 +1,5 @@
 # Fixed API Gateway Configuration
-# Spring Cloud Gateway Server MVC Compatible
+# Spring Cloud Gateway Server MVC Compatible with Swagger
 
 spring:
   application:
@@ -252,3 +252,10 @@ logging:
     name: logs/api-gateway.log
     max-size: 10MB
     max-history: 30
+
+# SWAGGER DISABLED ON GATEWAY - Access services directly
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
