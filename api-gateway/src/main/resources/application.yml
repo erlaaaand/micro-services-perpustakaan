@@ -1,89 +1,112 @@
-# Fixed API Gateway Configuration
-# Spring Cloud Gateway Server MVC Compatible with Swagger
+# ==============================================================
+# API GATEWAY CONFIGURATION (CLEAN VERSION)
+# Compatible with: ELK Stack (Logging)
+# ==============================================================
 
 spring:
   application:
     name: api-gateway
   
-  # Spring Cloud Gateway MVC Configuration
+  # Spring Cloud Gateway Configuration
   cloud:
     gateway:
-      mvc:
-        # HTTP Timeouts
-        http-client:
-          connect-timeout: 5000
-          response-timeout: 30s
+      # Konfigurasi HTTP Client
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+      
+      # Konfigurasi CORS Global (PENTING UNTUK SWAGGER)
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+      # Daftar Routes
+      routes:
+        # ==========================================
+        # 1. ROUTE KHUSUS SWAGGER (Docs Aggregator)
+        # ==========================================
+        - id: openapi-anggota
+          uri: lb://service-anggota
+          predicates:
+            - Path=/v3/api-docs/service-anggota
+          filters:
+            - RewritePath=/v3/api-docs/service-anggota, /v3/api-docs
+
+        - id: openapi-buku
+          uri: lb://service-buku
+          predicates:
+            - Path=/v3/api-docs/service-buku
+          filters:
+            - RewritePath=/v3/api-docs/service-buku, /v3/api-docs
+
+        - id: openapi-peminjaman
+          uri: lb://service-peminjaman
+          predicates:
+            - Path=/v3/api-docs/service-peminjaman
+          filters:
+            - RewritePath=/v3/api-docs/service-peminjaman, /v3/api-docs
+
+        - id: openapi-pengembalian
+          uri: lb://service-pengembalian
+          predicates:
+            - Path=/v3/api-docs/service-pengembalian
+          filters:
+            - RewritePath=/v3/api-docs/service-pengembalian, /v3/api-docs
+
+        # ==========================================
+        # 2. ROUTE API UTAMA (Service Logic)
+        # ==========================================
         
-        # Routes Configuration
-        routes:
-          # Route untuk Service Anggota
-          - id: service-anggota
-            uri: lb://service-anggota
-            predicates:
-              - Path=/api/anggota/**
-            filters:
-              - StripPrefix=0
-              - name: Retry
-                args:
-                  retries: 3
-                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
-                  methods: GET,POST,PUT,DELETE
-                  backoff:
-                    firstBackoff: 50ms
-                    maxBackoff: 500ms
-                    factor: 2
-                    basedOnPreviousValue: false
-        
-          # Route untuk Service Buku
-          - id: service-buku
-            uri: lb://service-buku
-            predicates:
-              - Path=/api/buku/**
-            filters:
-              - StripPrefix=0
-              - name: Retry
-                args:
-                  retries: 3
-                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
-                  methods: GET,POST,PUT,DELETE
-                  backoff:
-                    firstBackoff: 50ms
-                    maxBackoff: 500ms
-                    factor: 2
-        
-          # Route untuk Service Peminjaman
-          - id: service-peminjaman
-            uri: lb://service-peminjaman
-            predicates:
-              - Path=/api/peminjaman/**
-            filters:
-              - StripPrefix=0
-              - name: Retry
-                args:
-                  retries: 3
-                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
-                  methods: GET,POST,PUT,DELETE
-                  backoff:
-                    firstBackoff: 50ms
-                    maxBackoff: 500ms
-                    factor: 2
-        
-          # Route untuk Service Pengembalian
-          - id: service-pengembalian
-            uri: lb://service-pengembalian
-            predicates:
-              - Path=/api/pengembalian/**
-            filters:
-              - StripPrefix=0
-              - name: Retry
-                args:
-                  retries: 3
-                  statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
-                  methods: GET,POST,PUT,DELETE
-                  backoff:
-                    firstBackoff: 50ms
-                    maxBackoff: 500ms
-                    factor: 2
+        # Service Anggota
+        - id: service-anggota
+          uri: lb://service-anggota
+          predicates:
+            - Path=/api/anggota/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET,POST,PUT,DELETE
+      
+        # Service Buku
+        - id: service-buku
+          uri: lb://service-buku
+          predicates:
+            - Path=/api/buku/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET,POST,PUT,DELETE
+      
+        # Service Peminjaman
+        - id: service-peminjaman
+          uri: lb://service-peminjaman
+          predicates:
+            - Path=/api/peminjaman/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET,POST,PUT,DELETE
+      
+        # Service Pengembalian
+        - id: service-pengembalian
+          uri: lb://service-pengembalian
+          predicates:
+            - Path=/api/pengembalian/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET,POST,PUT,DELETE
     
     # Load Balancer Configuration
     loadbalancer:
@@ -110,35 +133,29 @@ spring.lifecycle.timeout-per-shutdown-phase: 30s
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://eureka-server:8761/eureka/}
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
     register-with-eureka: true
     fetch-registry: true
     registry-fetch-interval-seconds: 10
-    eureka-server-connect-timeout-seconds: 15
-    eureka-server-read-timeout-seconds: 15
   instance:
-    prefer-ip-address: false
+    prefer-ip-address: true
     hostname: api-gateway
     instance-id: ${spring.application.name}:${random.value}
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
     metadata-map:
       management.port: ${server.port}
       management.context-path: /actuator
-      zone: zone1
 
-# Monitoring & Management
+# Monitoring & Management (CLEAN VERSION)
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics,gateway,env,loggers
+        # Hapus 'prometheus' dan 'metrics'
+        include: health,info,gateway,env,loggers
       base-path: /actuator
   endpoint:
     health:
       show-details: always
-      probes:
-        enabled: true
     gateway:
       enabled: true
   health:
@@ -148,28 +165,9 @@ management:
       enabled: true
     circuitbreakers:
       enabled: true
-    ratelimiters:
-      enabled: true
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://zipkin:9411/api/v2/spans}
-  metrics:
-    tags:
-      application: ${spring.application.name}
-      environment: ${ENVIRONMENT:dev}
-    export:
-      prometheus:
-        enabled: true
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true
-      slo:
-        http.server.requests: 50ms,100ms,200ms,500ms,1s,2s
+  # Hapus bagian Zipkin, Tracing, dan Metrics export disini
 
-# Resilience4j Configuration untuk MVC Gateway
+# Resilience4j Configuration (Tetap dipertahankan untuk kestabilan)
 resilience4j:
   circuitbreaker:
     configs:
@@ -182,28 +180,6 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 10s
         failureRateThreshold: 50
-        eventConsumerBufferSize: 10
-        recordExceptions:
-          - org.springframework.web.client.HttpServerErrorException
-          - java.io.IOException
-          - java.util.concurrent.TimeoutException
-        ignoreExceptions:
-          - org.springframework.web.client.HttpClientErrorException
-    instances:
-      anggotaCircuitBreaker:
-        baseConfig: default
-      bukuCircuitBreaker:
-        baseConfig: default
-      peminjamanCircuitBreaker:
-        baseConfig: default
-      pengembalianCircuitBreaker:
-        baseConfig: default
-  
-  timelimiter:
-    configs:
-      default:
-        timeoutDuration: 5s
-        cancelRunningFuture: true
     instances:
       anggotaCircuitBreaker:
         baseConfig: default
@@ -221,11 +197,6 @@ resilience4j:
         waitDuration: 500ms
         enableExponentialBackoff: true
         exponentialBackoffMultiplier: 2
-        retryExceptions:
-          - org.springframework.web.client.ResourceAccessException
-          - java.io.IOException
-        ignoreExceptions:
-          - org.springframework.web.client.HttpClientErrorException
     instances:
       anggotaRetry:
         baseConfig: default
@@ -240,22 +211,30 @@ resilience4j:
 logging:
   level:
     root: INFO
-    org.springframework.cloud.gateway.server.mvc: DEBUG
-    org.springframework.cloud.loadbalancer: DEBUG
+    org.springframework.cloud.gateway: DEBUG
     org.springframework.web: INFO
     com.perpustakaan: DEBUG
     io.github.resilience4j: DEBUG
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
-    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
   file:
     name: logs/api-gateway.log
     max-size: 10MB
     max-history: 30
 
-# SWAGGER DISABLED ON GATEWAY - Access services directly
+# SWAGGER ENABLED
 springdoc:
   api-docs:
-    enabled: false
+    enabled: true
   swagger-ui:
-    enabled: false
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - name: Service Anggota
+        url: /v3/api-docs/service-anggota
+      - name: Service Buku
+        url: /v3/api-docs/service-buku
+      - name: Service Peminjaman
+        url: /v3/api-docs/service-peminjaman
+      - name: Service Pengembalian
+        url: /v3/api-docs/service-pengembalian

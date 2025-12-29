@@ -1,5 +1,7 @@
-# API Gateway Dockerfile
-# Multi-stage build untuk efisiensi
+# ============================================
+# DOCKERFILE STANDARD (FIXED NETWORK ISSUE)
+# Gunakan ini untuk: Eureka, Gateway, & Services
+# ============================================
 
 # Stage 1: Build
 FROM maven:3.9-eclipse-temurin-17 AS builder
@@ -8,7 +10,10 @@ WORKDIR /build
 
 # Copy pom.xml dan download dependencies (untuk caching)
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+
+# --- BAGIAN YG DIPERBAIKI ---
+# Tambahkan '|| true' agar tidak error saat koneksi tidak stabil
+RUN mvn dependency:go-offline -B || true
 
 # Copy source code dan build
 COPY src ./src
@@ -32,7 +37,7 @@ RUN chown -R spring:spring /app
 # Switch to non-root user
 USER spring
 
-# Expose port
+# Expose port (Ini cuma dokumentasi, port asli diatur via docker-compose)
 EXPOSE 8080
 
 # Health check

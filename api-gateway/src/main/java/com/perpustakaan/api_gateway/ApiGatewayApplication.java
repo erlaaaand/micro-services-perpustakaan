@@ -3,28 +3,33 @@ package com.perpustakaan.api_gateway;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 @SpringBootApplication
 public class ApiGatewayApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ApiGatewayApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ApiGatewayApplication.class, args);
+    }
 
-	// Konfigurasi Global CORS untuk Gateway MVC
-	@Bean
-	public WebMvcConfigurer corsConfigurer() {
-		return new WebMvcConfigurer() {
-			@Override
-			public void addCorsMappings(CorsRegistry registry) {
-				registry.addMapping("/**") // Berlaku untuk semua route
-						.allowedOrigins("*") // Sesuaikan dengan domain frontend Anda untuk produksi
-						.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-						.allowedHeaders("*")
-						.maxAge(3600);
-			}
-		};
-	}
+    // Global CORS untuk Spring Cloud Gateway (REACTIVE)
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        // ⚠️ Untuk DEV (longgarkan). Produksi harus spesifik
+        config.addAllowedOriginPattern("*");
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
+        config.setAllowCredentials(false);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        return new CorsWebFilter(source);
+    }
 }
