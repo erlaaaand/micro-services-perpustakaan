@@ -1,4 +1,4 @@
-package com.perpustakaan.service_peminjaman.entity;
+package com.perpustakaan.service_peminjaman.entity.command;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

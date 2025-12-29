@@ -22,7 +22,6 @@ public class SwaggerConfig {
                                 .name("Perpustakaan Team")
                                 .email("team@perpustakaan.com")))
                 .servers(List.of(
-                        new Server().url("http://localhost:8083").description("Direct Access"),
                         new Server().url("http://localhost:8080").description("Via Gateway")
                 ));
     }

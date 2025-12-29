@@ -1,6 +1,6 @@
 package com.perpustakaan.service_peminjaman.vo;
 
-import com.perpustakaan.service_peminjaman.entity.Peminjaman;
+import com.perpustakaan.service_peminjaman.entity.query.PeminjamanReadModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ResponseTemplateVO {
-    private Peminjaman peminjaman;
+    private PeminjamanReadModel peminjaman; // Menggunakan Read Model
     private Anggota anggota;
     private Buku buku;
 }

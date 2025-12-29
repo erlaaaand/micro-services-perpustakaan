@@ -4,8 +4,9 @@ import com.perpustakaan.service_peminjaman.cqrs.command.*;
 import com.perpustakaan.service_peminjaman.cqrs.handler.*;
 import com.perpustakaan.service_peminjaman.cqrs.query.*;
 import com.perpustakaan.service_peminjaman.dto.PeminjamanRequest;
-import com.perpustakaan.service_peminjaman.entity.Peminjaman;
+import com.perpustakaan.service_peminjaman.entity.command.Peminjaman;
 import com.perpustakaan.service_peminjaman.vo.ResponseTemplateVO;
+import com.perpustakaan.service_peminjaman.entity.query.PeminjamanReadModel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,7 +49,6 @@ public class PeminjamanController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Peminjaman Detail", description = "Get transaction details including Anggota and Buku info")
     public ResponseEntity<ResponseTemplateVO> getPeminjaman(@PathVariable("id") Long id) {
         GetPeminjamanById query = new GetPeminjamanById(id);
         ResponseTemplateVO response = queryHandler.handle(query);
@@ -60,8 +60,7 @@ public class PeminjamanController {
     }
 
     @GetMapping
-    @Operation(summary = "Get All Peminjaman", description = "Get all transactions with pagination")
-    public ResponseEntity<Page<Peminjaman>> getAllPeminjaman(
+    public ResponseEntity<Page<PeminjamanReadModel>> getAllPeminjaman(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
         

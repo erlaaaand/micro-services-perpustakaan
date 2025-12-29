@@ -1,8 +1,8 @@
 package com.perpustakaan.service_peminjaman.cqrs.handler;
 
 import com.perpustakaan.service_peminjaman.cqrs.query.*;
-import com.perpustakaan.service_peminjaman.entity.Peminjaman;
-import com.perpustakaan.service_peminjaman.repository.PeminjamanRepository;
+import com.perpustakaan.service_peminjaman.entity.query.PeminjamanReadModel;
+import com.perpustakaan.service_peminjaman.repository.query.PeminjamanQueryRepository;
 import com.perpustakaan.service_peminjaman.vo.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +12,6 @@ import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -24,7 +23,7 @@ public class PeminjamanQueryHandler {
     private static final Logger logger = LoggerFactory.getLogger(PeminjamanQueryHandler.class);
 
     @Autowired
-    private PeminjamanRepository peminjamanRepository;
+    private PeminjamanQueryRepository peminjamanRepository; // Mongo Read Repo
 
     @Autowired
     private RestTemplate restTemplate;
@@ -32,50 +31,45 @@ public class PeminjamanQueryHandler {
     @Autowired
     private DiscoveryClient discoveryClient;
 
-    @Transactional(readOnly = true)
     public ResponseTemplateVO handle(GetPeminjamanById query) {
-        logger.debug("Handling GetPeminjamanById for ID: {}", query.getId());
-        
-        Optional<Peminjaman> peminjamanOpt = peminjamanRepository.findById(query.getId());
-        if (!peminjamanOpt.isPresent()) {
+        Optional<PeminjamanReadModel> peminjamanOpt = peminjamanRepository.findById(query.getId());
+        if (peminjamanOpt.isEmpty()) {
             return null;
         }
 
-        Peminjaman peminjaman = peminjamanOpt.get();
+        PeminjamanReadModel peminjaman = peminjamanOpt.get();
         ResponseTemplateVO vo = new ResponseTemplateVO();
         vo.setPeminjaman(peminjaman);
 
+        // Fetch detail ke service lain (tetap pakai RestTemplate)
         try {
-            // Ambil URL service dari Eureka
             String anggotaUrl = getServiceUrl("service-anggota");
             String bukuUrl = getServiceUrl("service-buku");
 
-            // Fetch Anggota
-            Anggota anggota = restTemplate.getForObject(
-                anggotaUrl + "/api/anggota/" + peminjaman.getAnggotaId(), 
-                Anggota.class
-            );
-            vo.setAnggota(anggota);
+            if (anggotaUrl != null) {
+                Anggota anggota = restTemplate.getForObject(
+                    anggotaUrl + "/api/anggota/" + peminjaman.getAnggotaId(), 
+                    Anggota.class
+                );
+                vo.setAnggota(anggota);
+            }
 
-            // Fetch Buku
-            Buku buku = restTemplate.getForObject(
-                bukuUrl + "/api/buku/" + peminjaman.getBukuId(), 
-                Buku.class
-            );
-            vo.setBuku(buku);
+            if (bukuUrl != null) {
+                Buku buku = restTemplate.getForObject(
+                    bukuUrl + "/api/buku/" + peminjaman.getBukuId(), 
+                    Buku.class
+                );
+                vo.setBuku(buku);
+            }
 
         } catch (Exception e) {
-            logger.warn("Gagal mengambil detail microservice (Anggota/Buku): {}", e.getMessage());
-            // Fallback: biarkan object Anggota/Buku null, tetap kembalikan data Peminjaman
+            logger.warn("Gagal mengambil detail microservice: {}", e.getMessage());
         }
 
         return vo;
     }
 
-    @Transactional(readOnly = true)
-    public Page<Peminjaman> handle(GetAllPeminjaman query) {
-        logger.debug("Handling GetAllPeminjaman - page: {}, size: {}", query.getPage(), query.getSize());
-        
+    public Page<PeminjamanReadModel> handle(GetAllPeminjaman query) {
         PageRequest pageRequest = PageRequest.of(query.getPage(), query.getSize());
         return peminjamanRepository.findAll(pageRequest);
     }
@@ -85,6 +79,6 @@ public class PeminjamanQueryHandler {
         if (instances != null && !instances.isEmpty()) {
             return instances.get(0).getUri().toString();
         }
-        throw new RuntimeException("Service " + serviceName + " not found di Eureka");
+        return null;
     }
 }
