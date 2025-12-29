@@ -1,4 +1,4 @@
-package com.perpustakaan.service_anggota.entity;
+package com.perpustakaan.service_anggota.entity.command;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
