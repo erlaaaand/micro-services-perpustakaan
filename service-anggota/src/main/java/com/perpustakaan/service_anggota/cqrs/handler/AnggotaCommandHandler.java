@@ -28,7 +28,7 @@ public class AnggotaCommandHandler {
     
     // Hapus @Value RabbitMQ exchange/routing keys karena tidak dipakai lagi
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Anggota handle(CreateAnggotaCommand command) {
         logger.info("Handling CreateAnggotaCommand for nomor: {}", command.getNomorAnggota());
         
@@ -52,7 +52,7 @@ public class AnggotaCommandHandler {
     }
     
     // ... (Handle Update & Delete TETAP SAMA logika simpannya) ...
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Anggota handle(UpdateAnggotaCommand command) {
          // ... logika update ...
          // contoh singkat:
@@ -66,7 +66,7 @@ public class AnggotaCommandHandler {
          return updated;
     }
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public void handle(DeleteAnggotaCommand command) {
         // ... logika delete ...
         anggotaRepository.deleteById(command.getId());
