@@ -2,7 +2,7 @@ version: '3.8'
 
 # ==========================================
 # PERPUSTAKAAN MICROSERVICES STACK
-# Architecture: CQRS (H2/Mongo) + ELK + Jenkins
+# Architecture: CQRS (Mongo) + ELK + Jenkins
 # ==========================================
 
 networks:
@@ -14,22 +14,43 @@ volumes:
     driver: local
   jenkins_home:
     driver: local
+  mongodb-data:  # <--- NEW VOLUME
+    driver: local
 
 services:
   # ==========================================
-  # 1. CI/CD INFRASTRUCTURE
+  # 1. DATABASE INFRASTRUCTURE
+  # ==========================================
+  
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - perpustakaan-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ==========================================
+  # 2. CI/CD INFRASTRUCTURE
   # ==========================================
   
   jenkins:
     image: jenkins/jenkins:lts-jdk17
     container_name: jenkins
-    user: root # Dibutuhkan agar bisa akses docker socket host
+    user: root
     ports:
-      - "9000:8080" # Host port 9000 (agar tidak bentrok dengan API Gateway 8080)
+      - "9000:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock # Penting: Agar Jenkins bisa build docker image
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - perpustakaan-network
     restart: unless-stopped
@@ -40,7 +61,7 @@ services:
           memory: 1G
 
   # ==========================================
-  # 2. LOGGING INFRASTRUCTURE (ELK)
+  # 3. LOGGING INFRASTRUCTURE (ELK)
   # ==========================================
 
   elasticsearch:
@@ -109,7 +130,7 @@ services:
     restart: unless-stopped
 
   # ==========================================
-  # 3. SERVICE DISCOVERY
+  # 4. SERVICE DISCOVERY
   # ==========================================
 
   eureka-server:
@@ -138,7 +159,7 @@ services:
     restart: unless-stopped
 
   # ==========================================
-  # 4. API GATEWAY
+  # 5. API GATEWAY
   # ==========================================
 
   api-gateway:
@@ -168,7 +189,7 @@ services:
     restart: unless-stopped
 
   # ==========================================
-  # 5. MICROSERVICES (CORE)
+  # 6. MICROSERVICES (CORE)
   # ==========================================
 
   service-anggota:
@@ -184,10 +205,14 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
-      # RabbitMQ ENV dihapus
+      # MONGO CONFIG
+      - SPRING_DATA_MONGODB_URI=${MONGODB_URI_ANGGOTA}
+      - SPRING_DATA_MONGODB_DATABASE=anggota_db
     depends_on:
       eureka-server:
         condition: service_healthy
+      mongodb:
+        condition: service_started
     networks:
       - perpustakaan-network
     healthcheck:
@@ -211,9 +236,14 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
+      # MONGO CONFIG
+      - SPRING_DATA_MONGODB_URI=${MONGODB_URI_BUKU}
+      - SPRING_DATA_MONGODB_DATABASE=buku_db
     depends_on:
       eureka-server:
         condition: service_healthy
+      mongodb:
+        condition: service_started
     networks:
       - perpustakaan-network
     healthcheck:
@@ -237,6 +267,9 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
+      # MONGO CONFIG
+      - SPRING_DATA_MONGODB_URI=${MONGODB_URI_PEMINJAMAN}
+      - SPRING_DATA_MONGODB_DATABASE=peminjaman_db
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -244,6 +277,8 @@ services:
         condition: service_healthy
       service-buku:
         condition: service_healthy
+      mongodb:
+        condition: service_started
     networks:
       - perpustakaan-network
     healthcheck:
@@ -267,11 +302,16 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
+      # MONGO CONFIG
+      - SPRING_DATA_MONGODB_URI=${MONGODB_URI_PENGEMBALIAN}
+      - SPRING_DATA_MONGODB_DATABASE=pengembalian_db
     depends_on:
       eureka-server:
         condition: service_healthy
       service-peminjaman:
         condition: service_healthy
+      mongodb:
+        condition: service_started
     networks:
       - perpustakaan-network
     healthcheck:
