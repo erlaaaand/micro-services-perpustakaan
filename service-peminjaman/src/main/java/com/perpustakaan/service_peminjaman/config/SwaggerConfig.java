@@ -15,9 +15,9 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Service Anggota API")
+                        .title("Service Peminjaman API")
                         .version("1.0.0")
-                        .description("REST API for Library Member Management")
+                        .description("REST API for Library Peminjaman Management")
                         .contact(new Contact()
                                 .name("Perpustakaan Team")
                                 .email("team@perpustakaan.com")))
