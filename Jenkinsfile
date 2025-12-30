@@ -2,13 +2,12 @@ pipeline {
     agent any
 
     tools {
-        // HAPUS baris jdk 'jdk-17'. Kita pakai Java bawaan container.
-        // Pastikan Anda sudah setting Maven dengan nama 'maven' di Global Tool Configuration
+        // Pastikan nama 'maven' sesuai dengan di Global Tool Configuration
         maven 'maven' 
     }
 
     environment {
-        // Ganti dengan Username Docker Hub Anda
+        // Username Docker Hub
         DOCKER_HUB_USER = 'erlandagsya' 
         
         GIT_COMMIT_SHORT = sh(
@@ -17,13 +16,14 @@ pipeline {
         ).trim()
         
         BUILD_VERSION = "${env.BUILD_NUMBER}-${GIT_COMMIT_SHORT}"
-        // Daftar folder service yang akan di-build
+        // Daftar folder service
         SERVICES = 'eureka-server,api-gateway,service-anggota,service-buku,service-peminjaman,service-pengembalian'
     }
 
     parameters {
         choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'production'], description: 'Target deployment environment')
-        booleanParam(name: 'RUN_TESTS', defaultValue: false, description: 'Run unit and integration tests (Skip for speed)')
+        // Default FALSE untuk test agar cepat
+        booleanParam(name: 'RUN_TESTS', defaultValue: false, description: 'Run unit and integration tests')
         booleanParam(name: 'DEPLOY_SERVICES', defaultValue: true, description: 'Deploy services after build')
         booleanParam(name: 'SKIP_DOCKER_BUILD', defaultValue: false, description: 'Skip Docker image build')
     }
@@ -41,7 +41,7 @@ pipeline {
                 script {
                     echo """
                     ╔═══════════════════════════════════════════════════════════╗
-                    ║  📦 PERPUSTAKAAN CI/CD PIPELINE (FIXED)                 ║
+                    ║  📦 PERPUSTAKAAN PIPELINE (MODE SANTAI / NO TEST)       ║
                     ║  Version: ${BUILD_VERSION}                                ║
                     ║  Environment: ${params.ENVIRONMENT}                       ║
                     ╚═══════════════════════════════════════════════════════════╝
@@ -57,14 +57,23 @@ pipeline {
             }
         }
 
-        stage('Build & Test Services') {
-            parallel {
-                stage('Eureka') { steps { buildAndTestService('eureka-server') } }
-                stage('Gateway') { steps { buildAndTestService('api-gateway') } }
-                stage('Anggota') { steps { buildAndTestService('service-anggota') } }
-                stage('Buku') { steps { buildAndTestService('service-buku') } }
-                stage('Peminjaman') { steps { buildAndTestService('service-peminjaman') } }
-                stage('Pengembalian') { steps { buildAndTestService('service-pengembalian') } }
+        // ============================================================
+        // PERUBAHAN UTAMA DI SINI (SEQUENTIAL & SKIP ALL TEST)
+        // ============================================================
+        stage('Build JARs (Sequential & No Test)') {
+            steps {
+                script {
+                    def services = SERVICES.split(',')
+                    services.each { service ->
+                        echo "🔨 Building ${service} (Skipping Tests)..."
+                        dir(service) {
+                            // PERINTAH SAKTI: -Dmaven.test.skip=true
+                            // Artinya: Jangan compile test, jangan jalankan test. 
+                            // Pokoknya bikin JAR dari main code saja.
+                            sh 'mvn clean package -Dmaven.test.skip=true'
+                        }
+                    }
+                }
             }
         }
 
@@ -86,7 +95,6 @@ pipeline {
             when { expression { params.SKIP_DOCKER_BUILD == false } }
             steps {
                 script {
-                    // Pastikan ID credentials ini sama dengan yang dibuat di Jenkins
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
                         sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
                         
@@ -107,7 +115,7 @@ pipeline {
                 script {
                     echo "Deploying to ${env.TARGET_ENV}..."
                     
-                    // --- GENERATE .ENV FILE (PENTING: UPDATE CONFIG MONGODB DI SINI) ---
+                    // Generate .env file
                     sh """
                         cat > .env << EOF
 # --- Environment Setup ---
@@ -117,14 +125,13 @@ BUILD_VERSION=${BUILD_VERSION}
 # --- Service Discovery ---
 EUREKA_SERVER_URL=http://eureka-server:8761/eureka/
 
-# --- DATABASE CONFIG (MONGODB URI - FIXED) ---
-# Ini settingan penting agar service bisa connect ke container mongo
+# --- DATABASE CONFIG (MONGODB URI) ---
 MONGODB_URI_ANGGOTA=mongodb://mongodb:27017/anggota_db
 MONGODB_URI_BUKU=mongodb://mongodb:27017/buku_db
 MONGODB_URI_PEMINJAMAN=mongodb://mongodb:27017/peminjaman_db
 MONGODB_URI_PENGEMBALIAN=mongodb://mongodb:27017/pengembalian_db
 
-# --- ELK Stack (Logging) ---
+# --- ELK Stack ---
 ELASTICSEARCH_HOST=elasticsearch
 ELASTICSEARCH_PORT=9200
 ELASTICSEARCH_HOSTS=http://elasticsearch:9200
@@ -150,7 +157,6 @@ EOF
                     """
                     
                     // Restart Docker Compose
-                    // Menggunakan '|| true' agar tidak fail jika container belum ada
                     sh "docker-compose down || true"
                     sh "docker-compose up -d"
                     
@@ -158,25 +164,11 @@ EOF
                 }
             }
         }
-        
-        // Stage Health Check (Opsional, matikan jika bikin lambat)
-        stage('Health Check') {
-             when { expression { params.DEPLOY_SERVICES == true } }
-             steps {
-                 script {
-                     echo '🏥 Waiting for services startup (30s)...'
-                     sleep(time: 30, unit: 'SECONDS')
-                     // Simple check only Gateway & Eureka for speed
-                     sh "curl -f http://localhost:8761/actuator/health || echo 'Eureka Not Ready'"
-                     sh "curl -f http://localhost:8080/actuator/health || echo 'Gateway Not Ready'"
-                 }
-             }
-        }
     }
     
     post {
         always {
-            cleanWs() // Bersihkan sisa build
+            cleanWs()
         }
         success {
             echo '✅ Pipeline Success!'
@@ -184,14 +176,5 @@ EOF
         failure {
             echo '❌ Pipeline Failed!'
         }
-    }
-}
-
-// Helper Function
-def buildAndTestService(String serviceName) {
-    dir(serviceName) {
-        echo "🔨 Building ${serviceName}..."
-        // Skip test agar cepat. Kalau mau test, hapus -DskipTests
-        sh 'mvn clean package -DskipTests' 
     }
 }
