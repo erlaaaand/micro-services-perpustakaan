@@ -1,21 +1,20 @@
 # ==============================================================
-# API GATEWAY CONFIGURATION (CLEAN VERSION)
-# Compatible with: ELK Stack (Logging)
+# API GATEWAY CONFIGURATION (FINAL FIX)
+# Stack: Spring Cloud Gateway, Eureka, Resilience4J, Swagger UI
 # ==============================================================
 
 spring:
   application:
     name: api-gateway
   
-  # Spring Cloud Gateway Configuration
   cloud:
     gateway:
-      # Konfigurasi HTTP Client
+      # Konfigurasi Timeout HTTP Client
       httpclient:
         connect-timeout: 5000
         response-timeout: 30s
       
-      # Konfigurasi CORS Global (PENTING UNTUK SWAGGER)
+      # Konfigurasi Global CORS (Pastikan Java Bean CORS dimatikan)
       globalcors:
         cors-configurations:
           '[/**]':
@@ -23,42 +22,46 @@ spring:
             allowedMethods: "*"
             allowedHeaders: "*"
 
-      # Daftar Routes
+      # ==========================================
+      # DAFTAR ROUTES
+      # ==========================================
       routes:
-        # ==========================================
-        # 1. ROUTE KHUSUS SWAGGER (Docs Aggregator)
-        # ==========================================
+        # ------------------------------------------
+        # 1. SWAGGER AGGREGATION ROUTES (FIXED REGEX)
+        # ------------------------------------------
+        # Regex ini menangkap URL baik dengan atau tanpa '/' di belakang
+        
         - id: openapi-anggota
           uri: lb://service-anggota
           predicates:
-            - Path=/v3/api-docs/service-anggota
+            - Path=/v3/api-docs/service-anggota/**
           filters:
-            - RewritePath=/v3/api-docs/service-anggota, /v3/api-docs
+            - RewritePath=/v3/api-docs/service-anggota(?<segment>.*), /v3/api-docs${segment}
 
         - id: openapi-buku
           uri: lb://service-buku
           predicates:
-            - Path=/v3/api-docs/service-buku
+            - Path=/v3/api-docs/service-buku/**
           filters:
-            - RewritePath=/v3/api-docs/service-buku, /v3/api-docs
+            - RewritePath=/v3/api-docs/service-buku(?<segment>.*), /v3/api-docs${segment}
 
         - id: openapi-peminjaman
           uri: lb://service-peminjaman
           predicates:
-            - Path=/v3/api-docs/service-peminjaman
+            - Path=/v3/api-docs/service-peminjaman/**
           filters:
-            - RewritePath=/v3/api-docs/service-peminjaman, /v3/api-docs
+            - RewritePath=/v3/api-docs/service-peminjaman(?<segment>.*), /v3/api-docs${segment}
 
         - id: openapi-pengembalian
           uri: lb://service-pengembalian
           predicates:
-            - Path=/v3/api-docs/service-pengembalian
+            - Path=/v3/api-docs/service-pengembalian/**
           filters:
-            - RewritePath=/v3/api-docs/service-pengembalian, /v3/api-docs
+            - RewritePath=/v3/api-docs/service-pengembalian(?<segment>.*), /v3/api-docs${segment}
 
-        # ==========================================
-        # 2. ROUTE API UTAMA (Service Logic)
-        # ==========================================
+        # ------------------------------------------
+        # 2. MAIN API ROUTES (SERVICE LOGIC)
+        # ------------------------------------------
         
         # Service Anggota
         - id: service-anggota
@@ -108,15 +111,15 @@ spring:
                 statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
                 methods: GET,POST,PUT,DELETE
     
-    # Load Balancer Configuration
-    loadbalancer:
-      ribbon:
-        enabled: false
-      cache:
-        enabled: true
-        ttl: 5s
-        capacity: 256
+      # Discovery Locator (Opsional, untuk auto-route)
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
 
+# ==========================================
+# SERVER CONFIGURATION
+# ==========================================
 server:
   port: 8080
   compression:
@@ -126,10 +129,12 @@ server:
     enabled: true
   shutdown: graceful
 
-# Spring Lifecycle
+# Graceful Shutdown Settings
 spring.lifecycle.timeout-per-shutdown-phase: 30s
 
-# Eureka Client Configuration
+# ==========================================
+# EUREKA CLIENT CONFIGURATION
+# ==========================================
 eureka:
   client:
     service-url:
@@ -145,12 +150,13 @@ eureka:
       management.port: ${server.port}
       management.context-path: /actuator
 
-# Monitoring & Management (CLEAN VERSION)
+# ==========================================
+# ACTUATOR & MONITORING
+# ==========================================
 management:
   endpoints:
     web:
       exposure:
-        # Hapus 'prometheus' dan 'metrics'
         include: health,info,gateway,env,loggers
       base-path: /actuator
   endpoint:
@@ -165,9 +171,10 @@ management:
       enabled: true
     circuitbreakers:
       enabled: true
-  # Hapus bagian Zipkin, Tracing, dan Metrics export disini
 
-# Resilience4j Configuration (Tetap dipertahankan untuk kestabilan)
+# ==========================================
+# RESILIENCE4J CONFIGURATION (CIRCUIT BREAKER)
+# ==========================================
 resilience4j:
   circuitbreaker:
     configs:
@@ -207,14 +214,16 @@ resilience4j:
       pengembalianRetry:
         baseConfig: default
 
-# Logging
+# ==========================================
+# LOGGING CONFIGURATION
+# ==========================================
 logging:
   level:
     root: INFO
-    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
     org.springframework.web: INFO
     com.perpustakaan: DEBUG
-    io.github.resilience4j: DEBUG
+    io.github.resilience4j: INFO
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
   file:
@@ -222,13 +231,20 @@ logging:
     max-size: 10MB
     max-history: 30
 
-# SWAGGER ENABLED
+# ==========================================
+# SWAGGER UI CONFIGURATION (AGGREGATOR)
+# ==========================================
 springdoc:
   api-docs:
     enabled: true
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+    # Mengurutkan endpoint berdasarkan HTTP Method (GET, POST, dll)
+    operationsSorter: method
+    # Mengurutkan tag (nama controller) sesuai abjad
+    tagsSorter: alpha
+    # Tampilkan URL service anak di dropdown Swagger UI
     urls:
       - name: Service Anggota
         url: /v3/api-docs/service-anggota
