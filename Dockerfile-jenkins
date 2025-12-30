@@ -1,0 +1,12 @@
+# Ambil base image asli
+FROM jenkins/jenkins:lts-jdk17
+
+# Masuk sebagai root untuk install program
+USER root
+
+# Update Linux dan Install Docker CLI
+RUN apt-get update && \
+    apt-get install -y docker.io && \
+    apt-get clean
+
+# (Opsional) Kembali ke user jenkins, tapi karena di docker-compose Anda set user: root, ini aman diabaikan.
