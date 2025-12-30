@@ -58,8 +58,10 @@ public class AnggotaCommandHandler {
          // contoh singkat:
          Optional<Anggota> existing = anggotaRepository.findById(command.getId());
          Anggota anggota = existing.get();
+         anggota.setNomorAnggota(command.getNomorAnggota());
          anggota.setNama(command.getNama());
-         // dst...
+         anggota.setAlamat(command.getAlamat());
+         anggota.setEmail(command.getEmail());
          Anggota updated = anggotaRepository.save(anggota);
 
          publishAnggotaUpdatedEvent(updated); // Panggil publish baru
