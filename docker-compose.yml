@@ -40,9 +40,11 @@ services:
   # ==========================================
   # 2. CI/CD INFRASTRUCTURE
   # ==========================================
-  
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    build: 
+      context: .
+      dockerfile: Dockerfile-jenkins  # <-- Arahkan ke file yang baru dibuat
+    # image: jenkins/jenkins:lts-jdk17  <-- HAPUS atau KOMENTAR baris ini
     container_name: jenkins
     user: root
     ports:
@@ -50,7 +52,7 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock # Kabel koneksi ke mesin Host
     networks:
       - perpustakaan-network
     restart: unless-stopped
