@@ -22,7 +22,7 @@ public class PengembalianCommandHandler {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Pengembalian handle(CreatePengembalianCommand command) {
         logger.info("Handling CreatePengembalianCommand for Peminjaman ID: {}", command.getPeminjamanId());
 
@@ -38,7 +38,7 @@ public class PengembalianCommandHandler {
         return saved;
     }
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Pengembalian handle(UpdatePengembalianCommand command) {
         logger.info("Handling UpdatePengembalianCommand ID: {}", command.getId());
 
@@ -56,7 +56,7 @@ public class PengembalianCommandHandler {
         return updated;
     }
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public void handle(DeletePengembalianCommand command) {
         logger.info("Handling DeletePengembalianCommand ID: {}", command.getId());
 
