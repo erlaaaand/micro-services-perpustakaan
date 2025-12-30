@@ -25,7 +25,7 @@ public class PeminjamanCommandHandler {
     @Autowired
     private ApplicationEventPublisher eventPublisher; // Internal Event
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Peminjaman handle(CreatePeminjamanCommand command) {
         logger.info("Handling CreatePeminjamanCommand");
 
@@ -44,7 +44,7 @@ public class PeminjamanCommandHandler {
         return saved;
     }
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Peminjaman handle(UpdatePeminjamanCommand command) {
         logger.info("Handling UpdatePeminjamanCommand ID: {}", command.getId());
 
@@ -62,7 +62,7 @@ public class PeminjamanCommandHandler {
         return updated;
     }
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Peminjaman handleUpdateStatus(Long id, String status) {
         logger.info("Handling Update Status ID: {}", id);
 
@@ -76,7 +76,7 @@ public class PeminjamanCommandHandler {
         return updated;
     }
 
-    @Transactional("writeTransactionManager")
+    @Transactional
     public void handle(DeletePeminjamanCommand command) {
         logger.info("Handling DeletePeminjamanCommand ID: {}", command.getId());
 
