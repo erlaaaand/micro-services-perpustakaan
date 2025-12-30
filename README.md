@@ -1,199 +1,224 @@
 # 📚 Sistem Microservices Perpustakaan
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Coverage](https://img.shields.io/badge/coverage-85%25-green.svg)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.0-brightgreen.svg)]()
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)]()
+<div align="center">
 
-Sistem manajemen perpustakaan enterprise-grade berbasis microservices dengan implementasi **CQRS pattern**, **complete CI/CD pipeline**, **comprehensive monitoring**, dan **distributed logging**.
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen?style=for-the-badge&logo=spring-boot)
+![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=java)
+![MongoDB](https://img.shields.io/badge/MongoDB-6.0-green?style=for-the-badge&logo=mongodb)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-## 🎯 Key Features
+**Sistem manajemen perpustakaan enterprise-grade dengan arsitektur microservices, implementasi CQRS pattern, CI/CD pipeline, dan monitoring terdistribusi**
 
-- ✅ **CQRS Pattern Implementation** - Command Query Responsibility Segregation
-- ✅ **Full CI/CD Pipeline** - Jenkins with automated testing & deployment
-- ✅ **Comprehensive Monitoring** - Prometheus, Grafana, Alertmanager
-- ✅ **Distributed Logging** - ELK Stack (Elasticsearch, Logstash, Kibana)
-- ✅ **Distributed Tracing** - Zipkin integration
+[Fitur](#-fitur-utama) • [Arsitektur](#-arsitektur-sistem) • [Quick Start](#-quick-start) • [Dokumentasi](#-dokumentasi-api) • [Monitoring](#-monitoring--observability)
+
+</div>
+
+---
+
+## 🎯 Fitur Utama
+
+<table>
+<tr>
+<td width="50%">
+
+### 🏗️ **Architecture & Patterns**
+- ✅ **CQRS Pattern** - Command Query Responsibility Segregation
+- ✅ **Event-Driven Architecture** - Internal event publishing
 - ✅ **Service Discovery** - Netflix Eureka
-- ✅ **API Gateway** - Spring Cloud Gateway
-- ✅ **Health Checks** - Spring Boot Actuator
-- ✅ **API Documentation** - OpenAPI/Swagger
+- ✅ **API Gateway** - Spring Cloud Gateway dengan routing
+- ✅ **Circuit Breaker** - Resilience4j untuk fault tolerance
+- ✅ **Load Balancing** - Client-side load balancing
+
+</td>
+<td width="50%">
+
+### 🔧 **DevOps & Operations**
+- ✅ **CI/CD Pipeline** - Jenkins automation
 - ✅ **Containerization** - Docker & Docker Compose
-- ✅ **Load Balancing** - Nginx reverse proxy
-- ✅ **Circuit Breaker** - Resilience4j
-- ✅ **Security Scanning** - OWASP Dependency Check
+- ✅ **Distributed Logging** - ELK Stack (Elasticsearch, Logstash, Kibana)
+- ✅ **Health Monitoring** - Spring Boot Actuator
+- ✅ **API Documentation** - OpenAPI/Swagger aggregation
+- ✅ **Graceful Shutdown** - Zero-downtime deployments
 
-## 🏗️ Architecture
+</td>
+</tr>
+</table>
 
+---
+
+## 🏛️ Arsitektur Sistem
+
+```mermaid
+graph TB
+    Client[Client Application]
+    
+    Client --> Gateway[API Gateway :8080]
+    
+    Gateway --> Eureka[Eureka Server :8761<br/>Service Discovery]
+    
+    Gateway --> SA[Service Anggota :8081<br/>H2 + MongoDB]
+    Gateway --> SB[Service Buku :8082<br/>H2 + MongoDB]
+    Gateway --> SP[Service Peminjaman :8083<br/>H2 + MongoDB]
+    Gateway --> SR[Service Pengembalian :8084<br/>H2 + MongoDB]
+    
+    SP -.Inter-service.-> SA
+    SP -.Inter-service.-> SB
+    SR -.Inter-service.-> SP
+    
+    SA --> WriteDB[(H2 Database<br/>Write Model)]
+    SA --> ReadDB[(MongoDB<br/>Read Model)]
+    
+    SA -.Event.-> ReadDB
+    SB -.Event.-> ReadDB
+    SP -.Event.-> ReadDB
+    SR -.Event.-> ReadDB
+    
+    Gateway --> ELK[ELK Stack<br/>Elasticsearch + Logstash + Kibana]
+    SA --> ELK
+    SB --> ELK
+    SP --> ELK
+    SR --> ELK
+    
+    style Gateway fill:#4CAF50
+    style Eureka fill:#2196F3
+    style SA fill:#FF9800
+    style SB fill:#FF9800
+    style SP fill:#FF9800
+    style SR fill:#FF9800
+    style ELK fill:#9C27B0
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLIENT LAYER                            │
-└─────────────────────────────────────────────────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    NGINX REVERSE PROXY                          │
-│                  (Load Balancing & SSL)                         │
-└─────────────────────────────────────────────────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      API GATEWAY (8080)                         │
-│              (Routing, Rate Limiting, Auth)                     │
-└─────────────────────────────────────────────────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  EUREKA SERVER (8761)                           │
-│                  (Service Discovery)                            │
-└─────────────────────────────────────────────────────────────────┘
-                              ▼
-┌──────────────────┬──────────────────┬──────────────────────────┐
-│  Service Anggota │  Service Buku    │  Service Peminjaman      │
-│     (8081)       │     (8082)       │      (8083)              │
-│  - CQRS Commands │  - CRUD Ops      │  - Inter-service Comm   │
-│  - CQRS Queries  │  - Validation    │  - State Management     │
-└──────────────────┴──────────────────┴──────────────────────────┘
-                              ▼
-                   Service Pengembalian (8084)
-                   - Late Fee Calculation
-                   - Return Processing
 
-┌─────────────────────────────────────────────────────────────────┐
-│                    MONITORING STACK                             │
-├─────────────┬──────────────┬──────────────┬────────────────────┤
-│ Prometheus  │   Grafana    │   Zipkin     │   ELK Stack        │
-│   (9090)    │   (3000)     │   (9411)     │  (ES/LS/KB)        │
-└─────────────┴──────────────┴──────────────┴────────────────────┘
-```
+### 📦 Komponen Utama
 
-## 📋 Prerequisites
+| Komponen | Port | Teknologi | Fungsi |
+|----------|------|-----------|--------|
+| **Eureka Server** | 8761 | Spring Cloud Netflix | Service Registry & Discovery |
+| **API Gateway** | 8080 | Spring Cloud Gateway | Routing, Load Balancing, Circuit Breaker |
+| **Service Anggota** | 8081 | Spring Boot + CQRS | Manajemen data anggota perpustakaan |
+| **Service Buku** | 8082 | Spring Boot + CQRS | Manajemen katalog buku |
+| **Service Peminjaman** | 8083 | Spring Boot + CQRS | Transaksi peminjaman buku |
+| **Service Pengembalian** | 8084 | Spring Boot + CQRS | Proses pengembalian & denda |
+| **MongoDB** | 27017 | MongoDB 6.0 | Read Model Database (CQRS) |
+| **Elasticsearch** | 9200 | Elastic 8.11 | Log storage & indexing |
+| **Logstash** | 5000 | Logstash 8.11 | Log processing pipeline |
+| **Kibana** | 5601 | Kibana 8.11 | Log visualization dashboard |
+| **Jenkins** | 9000 | Jenkins LTS | CI/CD Automation |
 
-### Required Software
-- **Java 17+** - [Download OpenJDK](https://adoptium.net/)
-- **Maven 3.6+** - [Download Maven](https://maven.apache.org/download.cgi)
-- **Docker 20.10+** - [Download Docker](https://docs.docker.com/get-docker/)
-- **Docker Compose v2+** - [Install Compose](https://docs.docker.com/compose/install/)
-
-### Optional Tools
-- **Jenkins** - For CI/CD pipeline
-- **Git** - Version control
-- **Postman** - API testing
-
-### System Requirements
-- **RAM**: 8GB minimum (16GB recommended)
-- **CPU**: 4 cores minimum
-- **Disk**: 20GB free space
-- **OS**: Linux, macOS, or Windows with WSL2
+---
 
 ## 🚀 Quick Start
 
-### 1. Clone Repository
+### Prerequisites
+
 ```bash
+# Required software
+- Java 17 or higher
+- Maven 3.9+
+- Docker 20.10+
+- Docker Compose v2+
+
+# System requirements
+- RAM: 8GB minimum (16GB recommended)
+- CPU: 4 cores minimum
+- Disk: 20GB free space
+```
+
+### 🔥 One-Command Setup
+
+```bash
+# Clone repository
 git clone <repository-url>
 cd perpustakaan-microservices
+
+# Build semua services
+./build-all.sh
+
+# Start semua services dengan Docker Compose
+docker-compose up -d
+
+# Verifikasi health status
+./deploy.sh health
 ```
 
-### 2. Build All Services
-```bash
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh dev
+### 📊 Verification
+
+Setelah startup (tunggu ~2-3 menit), akses:
+
+- **Eureka Dashboard**: http://localhost:8761
+- **API Gateway**: http://localhost:8080
+- **Swagger UI Gateway**: http://localhost:8080/swagger-ui.html
+- **Kibana Logs**: http://localhost:5601
+
+---
+
+## 🎨 CQRS Pattern Implementation
+
+Sistem ini mengimplementasikan **CQRS (Command Query Responsibility Segregation)** untuk memisahkan operasi write dan read:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT REQUEST                        │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+          ┌───────────────────────────────┐
+          │      API Gateway (8080)       │
+          └───────────────────────────────┘
+                          │
+          ┌───────────────┴────────────────┐
+          │                                │
+          ▼                                ▼
+┌─────────────────┐              ┌─────────────────┐
+│    COMMAND      │              │     QUERY       │
+│   (Write/H2)    │              │  (Read/Mongo)   │
+│                 │              │                 │
+│ - Create        │              │ - Get by ID     │
+│ - Update        │──────Event───▶│ - Get All      │
+│ - Delete        │              │ - Search        │
+└─────────────────┘              └─────────────────┘
 ```
 
-### 3. Verify Deployment
-```bash
-chmod +x scripts/health-check.sh
-./scripts/health-check.sh
-```
+**Keuntungan CQRS:**
+- ✅ Scalability: Read & Write dapat di-scale independent
+- ✅ Performance: Optimasi query untuk read operations
+- ✅ Flexibility: Model berbeda untuk Command & Query
+- ✅ Event Sourcing Ready: Event-driven synchronization
 
-## 🔧 Manual Setup
+---
 
-### Build Individual Services
-```bash
-# Build Eureka Server
-cd eureka-server
-mvn clean package -DskipTests
-cd ..
+## 📖 Dokumentasi API
 
-# Build API Gateway
-cd api-gateway
-mvn clean package -DskipTests
-cd ..
+### 🔹 Service Anggota (Member Management)
 
-# Build all microservices
-for service in service-anggota service-buku service-peminjaman service-pengembalian; do
-    cd $service
-    mvn clean package -DskipTests
-    cd ..
-done
-```
-
-### Run with Docker Compose
-```bash
-# Development environment
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-
-# Production environment
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
-## 🔍 Accessing Services
-
-### Application Services
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Eureka Dashboard** | http://localhost:8761 | Service registry |
-| **API Gateway** | http://localhost:8080 | Main entry point |
-| **Service Anggota** | http://localhost:8081/swagger-ui.html | Member management |
-| **Service Buku** | http://localhost:8082/swagger-ui.html | Book catalog |
-| **Service Peminjaman** | http://localhost:8083/swagger-ui.html | Borrowing service |
-| **Service Pengembalian** | http://localhost:8084/swagger-ui.html | Return service |
-
-### Monitoring & Logging
-| Tool | URL | Credentials | Purpose |
-|------|-----|-------------|---------|
-| **Prometheus** | http://localhost:9090 | - | Metrics collection |
-| **Grafana** | http://localhost:3000 | admin/admin | Metrics visualization |
-| **Kibana** | http://localhost:5601 | - | Log analysis |
-| **Zipkin** | http://localhost:9411 | - | Distributed tracing |
-| **Alertmanager** | http://localhost:9093 | - | Alert management |
-
-### Nginx Access
-| Path | Backend | Description |
-|------|---------|-------------|
-| http://localhost/api/ | API Gateway | All microservices |
-| http://localhost/grafana/ | Grafana | Monitoring dashboards |
-| http://localhost/kibana/ | Kibana | Log viewer |
-| http://localhost/prometheus/ | Prometheus | Metrics |
-| http://localhost/zipkin/ | Zipkin | Traces |
-
-## 📡 API Documentation
-
-### Service Anggota (Member Management)
+**Base URL**: `http://localhost:8080/api/anggota`
 
 #### Create Member
 ```bash
-POST http://localhost:8080/api/anggota
+POST /api/anggota
 Content-Type: application/json
 
 {
   "nomorAnggota": "A001",
   "nama": "John Doe",
-  "alamat": "Jl. Contoh No. 123",
+  "alamat": "Jl. Merdeka No. 123",
   "email": "john@example.com"
 }
 ```
 
-#### Get Member by ID
+#### Get All Members
 ```bash
-GET http://localhost:8080/api/anggota/1
+GET /api/anggota?page=0&size=10&sortBy=nama
 ```
 
-#### Get All Members (with pagination)
+#### Get Member by ID
 ```bash
-GET http://localhost:8080/api/anggota?page=0&size=10&sortBy=nama
+GET /api/anggota/{id}
 ```
 
 #### Update Member
 ```bash
-PUT http://localhost:8080/api/anggota/1
+PUT /api/anggota/{id}
 Content-Type: application/json
 
 {
@@ -206,321 +231,410 @@ Content-Type: application/json
 
 #### Delete Member
 ```bash
-DELETE http://localhost:8080/api/anggota/1
+DELETE /api/anggota/{id}
 ```
 
-### CQRS Pattern Implementation
+---
 
-The service-anggota implements CQRS (Command Query Responsibility Segregation):
+### 🔹 Service Buku (Book Catalog)
 
-**Commands** (Write Operations):
-- `CreateAnggotaCommand` - Create new member
-- `UpdateAnggotaCommand` - Update existing member
-- `DeleteAnggotaCommand` - Delete member
+**Base URL**: `http://localhost:8080/api/buku`
 
-**Queries** (Read Operations):
-- `GetAnggotaByIdQuery` - Retrieve member by ID
-- `GetAllAnggotaQuery` - List all members with pagination
-- `GetAnggotaByNomorQuery` - Find member by number
+#### Create Book
+```bash
+POST /api/buku
+Content-Type: application/json
 
-## 🔄 CI/CD Pipeline
+{
+  "kodeBuku": "BK-001",
+  "judul": "Java Programming",
+  "pengarang": "John Doe",
+  "penerbit": "Erlangga",
+  "tahunTerbit": 2020
+}
+```
+
+#### Get All Books
+```bash
+GET /api/buku?page=0&size=10&sortBy=judul
+```
+
+---
+
+### 🔹 Service Peminjaman (Borrowing)
+
+**Base URL**: `http://localhost:8080/api/peminjaman`
+
+#### Create Borrowing Transaction
+```bash
+POST /api/peminjaman
+Content-Type: application/json
+
+{
+  "anggotaId": 1,
+  "bukuId": 1,
+  "tanggalPinjam": "2024-01-01",
+  "tanggalKembali": "2024-01-15",
+  "status": "DIPINJAM"
+}
+```
+
+#### Get Borrowing with Details (Inter-service call)
+```bash
+GET /api/peminjaman/{id}
+
+# Response includes aggregated data:
+{
+  "peminjaman": { ... },
+  "anggota": { "nama": "John Doe", ... },
+  "buku": { "judul": "Java Programming", ... }
+}
+```
+
+---
+
+### 🔹 Service Pengembalian (Return & Fines)
+
+**Base URL**: `http://localhost:8080/api/pengembalian`
+
+#### Create Return Transaction
+```bash
+POST /api/pengembalian
+Content-Type: application/json
+
+{
+  "peminjamanId": 1,
+  "tanggalDikembalikan": "2024-01-20",
+  "terlambat": 5,
+  "denda": 25000.0
+}
+```
+
+---
+
+## 🔍 Monitoring & Observability
+
+### 📊 ELK Stack (Logging)
+
+**Kibana Dashboard**: http://localhost:5601
+
+#### Setup Index Pattern
+1. Buka Kibana → Management → Stack Management
+2. Pilih **Index Patterns** → **Create index pattern**
+3. Masukkan pattern: `logs-*`
+4. Pilih timestamp field: `@timestamp`
+5. Klik **Create index pattern**
+
+#### View Logs
+1. Buka **Discover** menu
+2. Filter berdasarkan service:
+   ```
+   app_name: "service-anggota"
+   app_name: "service-buku"
+   ```
+3. Gunakan KQL query untuk searching
+
+### 🩺 Health Checks
+
+```bash
+# Check all services
+./deploy.sh health
+
+# Individual service health
+curl http://localhost:8761/actuator/health  # Eureka
+curl http://localhost:8080/actuator/health  # Gateway
+curl http://localhost:8081/actuator/health  # Service Anggota
+curl http://localhost:8082/actuator/health  # Service Buku
+curl http://localhost:8083/actuator/health  # Service Peminjaman
+curl http://localhost:8084/actuator/health  # Service Pengembalian
+```
+
+---
+
+## 🔧 CI/CD Pipeline
 
 ### Jenkins Setup
 
-1. **Install Jenkins**
+1. **Akses Jenkins**: http://localhost:9000
+
+2. **Get Initial Password**:
 ```bash
-docker run -d -p 8090:8080 -p 50000:50000 \
-  -v jenkins_home:/var/jenkins_home \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  --name jenkins jenkins/jenkins:lts
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
-2. **Access Jenkins**
-- URL: http://localhost:8090
-- Get initial password: `docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword`
+3. **Install Required Plugins**:
+   - Docker Pipeline
+   - Maven Integration
+   - Git Plugin
 
-3. **Install Required Plugins**
-- Docker Pipeline
-- Maven Integration
-- JaCoCo
-- SonarQube Scanner
-- Email Extension
-- Slack Notification (optional)
+4. **Configure Credentials**:
+   - Docker Hub: `docker-hub-credentials`
+   - Username & Password
 
-4. **Configure Credentials**
-- Docker Hub credentials: `docker-hub-credentials`
-- SonarQube token: `sonarqube-token`
-- Email SMTP settings
-
-5. **Create Pipeline**
-- New Item → Pipeline
-- Pipeline script from SCM
-- Repository URL: `<your-repo-url>`
-- Script Path: `Jenkinsfile`
+5. **Create Pipeline**:
+   - New Item → Pipeline
+   - Pipeline script from SCM
+   - Repository URL: `<your-repo-url>`
+   - Script Path: `Jenkinsfile`
 
 ### Pipeline Stages
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌──────────────┐
-│  Checkout   │───▶│ Build & Test│───▶│Code Quality  │
-└─────────────┘    └─────────────┘    └──────────────┘
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│  Initialize  │──▶│   Checkout   │──▶│ Build & Test │
+└──────────────┘   └──────────────┘   └──────────────┘
                                               │
-      ┌───────────────────────────────────────┘
-      │
-      ▼
-┌──────────────┐    ┌──────────────┐    ┌───────────────┐
-│Quality Gate  │───▶│Security Scan │───▶│Docker Build   │
-└──────────────┘    └──────────────┘    └───────────────┘
-                                              │
-      ┌───────────────────────────────────────┘
-      │
-      ▼
-┌───────────────┐    ┌──────────────┐    ┌──────────────┐
-│Push Registry  │───▶│  Deploy      │───▶│Health Check  │
-└───────────────┘    └──────────────┘    └──────────────┘
+                                              ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│ Health Check │◀──│    Deploy    │◀──│  Push Docker │
+└──────────────┘   └──────────────┘   └──────────────┘
 ```
 
-## 📊 Monitoring & Observability
+---
 
-### Prometheus Metrics
+## 🛠️ Development Guide
 
-Key metrics collected:
-- **HTTP Metrics**: Request count, duration, status codes
-- **JVM Metrics**: Memory usage, GC time, thread count
-- **Database Metrics**: Connection pool, query time
-- **Custom Metrics**: Business KPIs
+### Build Individual Service
 
-### Grafana Dashboards
-
-Pre-configured dashboards:
-1. **Microservices Overview** - System-wide health
-2. **Service Performance** - Per-service metrics
-3. **JVM Metrics** - Memory, GC, threads
-4. **Database Performance** - Connection pools, queries
-5. **Error Analysis** - Error rates and types
-
-### Distributed Tracing
-
-Zipkin traces show:
-- Request flow across services
-- Service dependencies
-- Latency breakdown
-- Error propagation
-
-### Log Aggregation
-
-ELK Stack provides:
-- **Centralized logging** - All logs in one place
-- **Full-text search** - Find logs quickly
-- **Log parsing** - Structured log data
-- **Visualization** - Log trends and patterns
-- **Alerting** - Proactive issue detection
-
-## 🧪 Testing
-
-### Run All Tests
 ```bash
-mvn clean verify
+cd service-anggota
+mvn clean package -DskipTests
 ```
 
-### Run Unit Tests Only
+### Run Service Locally
+
 ```bash
-mvn test
+# Start Eureka first
+cd eureka-server
+mvn spring-boot:run
+
+# Then start other services
+cd service-anggota
+mvn spring-boot:run
 ```
 
-### Run Integration Tests
-```bash
-mvn integration-test
+### Environment Variables
+
+Buat file `.env` di root project:
+
+```properties
+# Eureka
+EUREKA_SERVER_URL=http://localhost:8761/eureka/
+
+# MongoDB
+MONGODB_URI_ANGGOTA=mongodb://localhost:27017/anggota_db
+MONGODB_URI_BUKU=mongodb://localhost:27017/buku_db
+MONGODB_URI_PEMINJAMAN=mongodb://localhost:27017/peminjaman_db
+MONGODB_URI_PENGEMBALIAN=mongodb://localhost:27017/pengembalian_db
+
+# ELK Stack
+ELASTICSEARCH_HOSTS=http://localhost:9200
+LOGSTASH_HOST=localhost
+LOGSTASH_PORT=5000
 ```
 
-### Generate Coverage Report
-```bash
-mvn jacoco:report
-```
-
-### Run Security Scan
-```bash
-mvn org.owasp:dependency-check-maven:check
-```
-
-### Test Coverage Requirements
-- **Line Coverage**: 70% minimum
-- **Branch Coverage**: 60% minimum
-- **Integration Tests**: All critical paths covered
-
-## 🔒 Security
-
-### Implemented Security Measures
-- ✅ OWASP dependency scanning
-- ✅ Input validation
-- ✅ Rate limiting (Nginx)
-- ✅ HTTPS support (configurable)
-- ✅ Security headers
-- ✅ Actuator endpoint protection
-
-### Security Best Practices
-1. Regular dependency updates
-2. Secret management (never commit secrets)
-3. Role-based access control
-4. API key authentication (optional)
-5. Network segmentation (Docker networks)
+---
 
 ## 🐛 Troubleshooting
 
 ### Services Not Starting
+
 ```bash
 # Check logs
-docker-compose logs [service-name]
-
-# Check container status
-docker-compose ps
+docker-compose logs -f [service-name]
 
 # Restart specific service
-./scripts/restart-service.sh [service-name]
+docker-compose restart [service-name]
+
+# Clean rebuild
+docker-compose down
+docker-compose up -d --build
 ```
 
 ### Port Already in Use
-```bash
-# Find process using port
-lsof -i :[port]  # macOS/Linux
-netstat -ano | findstr :[port]  # Windows
-
-# Kill process or change port in configuration
-```
-
-### Memory Issues
-```bash
-# Increase Docker memory limit
-# Docker Desktop → Settings → Resources → Memory
-
-# Or reduce service memory
-# Edit JAVA_OPTS in docker-compose.yml
-```
-
-### Health Check Failures
-```bash
-# Run health check script
-./scripts/health-check.sh
-
-# Check individual service
-curl http://localhost:[port]/actuator/health
-
-# View service logs
-docker-compose logs -f [service-name]
-```
-
-## 📝 Maintenance Scripts
 
 ```bash
-# Deploy services
-./scripts/deploy.sh [dev|staging|prod]
+# Find process using port (Linux/Mac)
+lsof -i :8080
 
-# Health check
-./scripts/health-check.sh
+# Find process using port (Windows)
+netstat -ano | findstr :8080
 
-# View logs
-./scripts/logs.sh [service-name]
-
-# Restart service
-./scripts/restart-service.sh [service-name]
-
-# Cleanup Docker resources
-./scripts/cleanup.sh
-
-# Backup data
-./scripts/backup.sh
+# Kill process
+kill -9 <PID>  # Linux/Mac
+taskkill /PID <PID> /F  # Windows
 ```
 
-## 🔄 Update Procedure
+### MongoDB Connection Issues
 
-1. **Pull latest changes**
 ```bash
-git pull origin main
+# Verify MongoDB is running
+docker ps | grep mongodb
+
+# Check MongoDB logs
+docker logs mongodb
+
+# Connect to MongoDB shell
+docker exec -it mongodb mongosh
 ```
 
-2. **Build services**
+### Eureka Registration Issues
+
+1. Tunggu 30-60 detik untuk service registration
+2. Check Eureka dashboard: http://localhost:8761
+3. Verify `eureka.client.register-with-eureka=true` di application.properties
+4. Check network connectivity: `docker network inspect perpustakaan-network`
+
+---
+
+## 📂 Project Structure
+
+```
+perpustakaan-microservices/
+├── 📁 eureka-server/              # Service Discovery
+├── 📁 api-gateway/                # API Gateway & Routing
+├── 📁 service-anggota/            # Member Management (CQRS)
+│   ├── 📁 cqrs/
+│   │   ├── command/              # Write operations
+│   │   ├── query/                # Read operations
+│   │   └── handler/              # Command/Query handlers
+│   ├── 📁 entity/
+│   │   ├── command/              # Write model (H2)
+│   │   └── query/                # Read model (MongoDB)
+│   ├── 📁 repository/
+│   │   ├── command/              # JPA Repository
+│   │   └── query/                # MongoDB Repository
+│   └── 📁 event/                 # Event publishing
+├── 📁 service-buku/               # Book Catalog (CQRS)
+├── 📁 service-peminjaman/         # Borrowing Service (CQRS)
+├── 📁 service-pengembalian/       # Return Service (CQRS)
+├── 📁 monitoring/
+│   ├── 📁 kibana/                # Kibana config
+│   └── 📁 logstash/              # Logstash pipeline
+├── 📄 docker-compose.yml         # Docker orchestration
+├── 📄 Jenkinsfile                # CI/CD pipeline
+├── 📄 .env.example               # Environment template
+├── 📄 build-all.sh               # Build automation
+└── 📄 deploy.sh                  # Deployment script
+```
+
+---
+
+## 🧪 Testing
+
+### Unit Tests
+
 ```bash
-./scripts/deploy.sh dev
+# Run tests for specific service
+cd service-anggota
+mvn test
+
+# Run all tests
+mvn clean verify
 ```
 
-3. **Run tests**
+### Integration Tests
+
 ```bash
-mvn verify
+# With coverage report
+mvn clean test jacoco:report
+
+# View coverage report
+open target/site/jacoco/index.html
 ```
 
-4. **Deploy**
-```bash
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+### API Testing with Postman
+
+1. Import collection: `postman/perpustakaan-api.json`
+2. Set environment variables
+3. Run test suite
+
+---
+
+## 🔐 Security Notes
+
+⚠️ **Development Mode**: Konfigurasi saat ini untuk development/testing
+
+**Production Checklist**:
+- [ ] Enable Spring Security
+- [ ] Configure JWT authentication
+- [ ] Setup HTTPS/SSL certificates
+- [ ] Use secrets management (Vault)
+- [ ] Enable Actuator security
+- [ ] Configure CORS properly
+- [ ] Setup rate limiting
+- [ ] Enable audit logging
+
+---
+
+## 📈 Performance Tuning
+
+### JVM Options
+
+Edit `JAVA_OPTS` di docker-compose.yml:
+
+```yaml
+environment:
+  - JAVA_OPTS=-Xmx1g -Xms512m -XX:+UseG1GC
 ```
 
-## 📚 Tech Stack
+### MongoDB Indexing
 
-### Backend
-- **Spring Boot 4.0.0** - Application framework
-- **Spring Cloud 2025.1.0** - Microservices framework
-- **Netflix Eureka** - Service discovery
-- **Spring Cloud Gateway** - API gateway
-- **H2 Database** - In-memory database
-- **Hibernate** - ORM
+```javascript
+// Connect to MongoDB
+docker exec -it mongodb mongosh
 
-### Monitoring
-- **Prometheus** - Metrics collection
-- **Grafana** - Metrics visualization
-- **Alertmanager** - Alert management
+// Create indexes
+use anggota_read_db
+db.anggota_read.createIndex({ "nomorAnggota": 1 })
 
-### Logging
-- **Elasticsearch** - Log storage & search
-- **Logstash** - Log processing
-- **Kibana** - Log visualization
-- **Filebeat** - Log shipping
+use buku_read_db
+db.buku_read.createIndex({ "kodeBuku": 1 })
+```
 
-### Tracing
-- **Zipkin** - Distributed tracing
-
-### DevOps
-- **Docker** - Containerization
-- **Docker Compose** - Orchestration
-- **Jenkins** - CI/CD
-- **Maven** - Build tool
-- **Nginx** - Reverse proxy
-
-### Quality
-- **JUnit 5** - Unit testing
-- **REST Assured** - API testing
-- **JaCoCo** - Code coverage
-- **SonarQube** - Code quality
-- **OWASP** - Security scanning
-- **SpotBugs** - Static analysis
-- **Checkstyle** - Code style
-- **PMD** - Code analysis
+---
 
 ## 🤝 Contributing
 
-1. Fork the repository
+Contributions are welcome! Please follow these steps:
+
+1. Fork repository
 2. Create feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit changes (`git commit -m 'Add AmazingFeature'`)
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open Pull Request
 
-## 📄 License
+---
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 📝 License
 
-## 👥 Contributors
-
-- **Erland Agsya** - Initial work
-
-## 🙏 Acknowledgments
-
-- Spring Boot team
-- Netflix OSS
-- Elastic team
-- Prometheus & Grafana communities
-
-## 📞 Support
-
-For support, email team@perpustakaan.com or create an issue in the repository.
+This project is licensed under the **MIT License** - see LICENSE file for details.
 
 ---
 
-Made by Erland Agsya
+## 🎓 Learning Resources
+
+- [Spring Cloud Documentation](https://spring.io/projects/spring-cloud)
+- [CQRS Pattern](https://martinfowler.com/bliki/CQRS.html)
+- [Microservices Architecture](https://microservices.io/)
+- [Docker Documentation](https://docs.docker.com/)
+- [MongoDB Best Practices](https://docs.mongodb.com/manual/)
+
+---
+
+## 📞 Support & Contact
+
+Untuk pertanyaan atau bantuan:
+- 📧 Email: team@perpustakaan.com
+- 🐛 Issues: [GitHub Issues](https://github.com/username/repo/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/username/repo/discussions)
+
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#-sistem-microservices-perpustakaan)**
+
+Built with Java, Spring Boot, and passion for clean architecture
+
+</div>
