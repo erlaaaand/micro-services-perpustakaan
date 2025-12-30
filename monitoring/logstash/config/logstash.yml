@@ -1,17 +1,14 @@
-# monitoring/logstash/config/logstash.yml
 http.host: "0.0.0.0"
-xpack.monitoring.enabled: true
-xpack.monitoring.elasticsearch.hosts: ["http://elasticsearch:9200"]
+
+# Matikan monitoring xpack jika tidak pakai security di ES, agar log tidak penuh warning
+xpack.monitoring.enabled: false 
+# xpack.monitoring.elasticsearch.hosts: ["http://elasticsearch:9200"]
 
 # Pipeline settings
 pipeline.workers: 2
 pipeline.batch.size: 125
 pipeline.batch.delay: 50
 
-# Queue settings
+# Queue settings (Persisted = aman jika restart, log tidak hilang)
 queue.type: persisted
 queue.max_bytes: 1gb
-
-# Logging
-log.level: info
-path.logs: /var/log/logstash

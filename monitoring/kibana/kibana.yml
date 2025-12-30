@@ -1,91 +1,37 @@
-# monitoring/kibana/kibana.yml
+# ===================
+# SERVER SETTINGS
+# ===================
 server.name: kibana
 server.host: "0.0.0.0"
 server.port: 5601
 
-# Elasticsearch Configuration
+# ===================
+# ELASTICSEARCH CONNECTION
+# ===================
 elasticsearch.hosts: ["http://elasticsearch:9200"]
 elasticsearch.requestTimeout: 30000
 elasticsearch.pingTimeout: 30000
 
-# Monitoring
-monitoring.ui.container.elasticsearch.enabled: true
-monitoring.kibana.collection.enabled: false
-
-# UI Settings
-i18n.locale: "en"
-
-# Security (disabled for dev environment)
+# ===================
+# SECURITY (DEV MODE)
+# ===================
 xpack.security.enabled: false
-xpack.encryptedSavedObjects.encryptionKey: "min-32-byte-long-strong-encryption-key"
 
-# Telemetry
+# Encryption Key (WAJIB ADA untuk Saved Objects)
+xpack.encryptedSavedObjects.encryptionKey: "min-32-byte-long-strong-encryption-key-12345"
+
+# ===================
+# TELEMETRY
+# ===================
 telemetry.enabled: false
 telemetry.optIn: false
 
-# Saved Objects
-savedObjects.maxImportPayloadBytes: 26214400
-
-# Data Views
-data_views.scriptedFieldsEnabled: true
-
-# Kibana Reporting
-xpack.reporting.enabled: false
-
-# APM
-xpack.apm.enabled: false
-
-# Canvas
-xpack.canvas.enabled: true
-
-# Maps
-xpack.maps.enabled: true
-
-# Graph
-xpack.graph.enabled: true
-
-# Machine Learning
-xpack.ml.enabled: false
-
-# Monitoring
-xpack.monitoring.enabled: true
+# ===================
+# MONITORING
+# ===================
+# Monitoring cluster sendiri via UI
 xpack.monitoring.ui.enabled: true
 
-# Alerting
-xpack.alerting.enabled: true
-
-# Actions
-xpack.actions.enabled: true
-
-# Task Manager
-xpack.task_manager.enabled: true
-
-# Index Management
-xpack.index_management.enabled: true
-
-# Rollup
-xpack.rollup.enabled: false
-
-# Remote Clusters
-xpack.remote_clusters.enabled: true
-
-# Cross Cluster Search
-xpack.ccr.enabled: false
-
-# License Management
-xpack.license_management.enabled: true
-
-# Snapshot and Restore
-xpack.snapshot_restore.enabled: true
-
-# Ingest Pipelines
-xpack.ingest_pipelines.enabled: true
-
-# Index Lifecycle Management
-xpack.ilm.enabled: true
-
-# Fleet
-xpack.fleet.enabled: false
-
-# Enterprise Search
-enterpriseSearch.enabled: false
+# CATATAN:
+# Baris xpack.ml.enabled, apm, fleet, dll SUDAH DIHAPUS
+# karena menyebabkan error startup di Kibana 8.x.
