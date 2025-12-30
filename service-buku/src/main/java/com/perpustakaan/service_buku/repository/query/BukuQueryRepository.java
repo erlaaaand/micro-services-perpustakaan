@@ -6,6 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BukuQueryRepository extends MongoRepository<BukuReadModel, Long> {
-    // MongoRepo otomatis support findBy... sama seperti JPA
-    BukuReadModel findByNomorbuku(String nomorbuku);
+    BukuReadModel findByKodeBuku(String kodeBuku);
 }

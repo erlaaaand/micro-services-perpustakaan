@@ -17,7 +17,7 @@ public class BukuQueryHandler {
     private static final Logger logger = LoggerFactory.getLogger(BukuQueryHandler.class);
     
     @Autowired
-    private BukuQueryRepository bukuRepository; // Mongo Repository
+    private BukuQueryRepository bukuRepository;
     
     public BukuReadModel handle(GetBukuByIdQuery query) {
         logger.debug("Handling GetBukuByIdQuery for ID: {}", query.getId());
@@ -34,8 +34,9 @@ public class BukuQueryHandler {
         return bukuRepository.findAll(pageRequest);
     }
     
+    // Fix: Ganti dari 'findByNomorbuku' menjadi 'findByKodeBuku'
     public BukuReadModel handle(GetBukuByNomorQuery query) {
-        logger.debug("Handling GetBukuByNomorQuery for nomor: {}", query.getNomorBuku());
-        return bukuRepository.findByNomorbuku(query.getNomorBuku());
+        logger.debug("Handling GetBukuByNomorQuery for kode: {}", query.getNomorBuku());
+        return bukuRepository.findByKodeBuku(query.getNomorBuku());
     }
 }

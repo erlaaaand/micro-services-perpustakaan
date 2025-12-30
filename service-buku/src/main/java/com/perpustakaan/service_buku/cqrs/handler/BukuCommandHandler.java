@@ -26,7 +26,7 @@ public class BukuCommandHandler {
     @Autowired
     private ApplicationEventPublisher eventPublisher; // Ganti RabbitTemplate
     
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Buku handle(CreateBukuCommand command) {
         logger.info("Handling CreateBukuCommand for kode: {}", command.getKodeBuku());
 
@@ -49,7 +49,7 @@ public class BukuCommandHandler {
         return saved;
     }
     
-    @Transactional("writeTransactionManager")
+    @Transactional
     public Buku handle(UpdateBukuCommand command) {
         logger.info("Handling UpdateBukuCommand for ID: {}", command.getId());
         
@@ -79,7 +79,7 @@ public class BukuCommandHandler {
         return updated;
     }
     
-    @Transactional("writeTransactionManager")
+    @Transactional
     public void handle(DeleteBukuCommand command) {
         logger.info("Handling DeleteBukuCommand for ID: {}", command.getId());
         
