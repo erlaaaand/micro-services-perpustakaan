@@ -213,7 +213,7 @@ Sistem menggunakan RabbitMQ untuk asynchronous event publishing dan consuming:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    EVENT FLOW                             │
+│                    EVENT FLOW                            │
 └──────────────────────────────────────────────────────────┘
 
 Command Service                RabbitMQ                Read Service
