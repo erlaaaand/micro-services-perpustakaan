@@ -899,7 +899,7 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 ## 📞 Support & Contact
 
 Untuk pertanyaan atau bantuan:
-- 📧 Email: team@perpustakaan.com
+- 📧 Email: blackpenta98@gmail.com
 - 🐛 Issues: [GitHub Issues](https://github.com/username/repo/issues)
 - 💬 Discussions: [GitHub Discussions](https://github.com/username/repo/discussions)
 
