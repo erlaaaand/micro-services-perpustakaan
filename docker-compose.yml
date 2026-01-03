@@ -161,6 +161,29 @@ services:
     restart: unless-stopped
 
   # ==========================================
+  # RABBIT MQ MESSAGE BROKER
+  # ==========================================
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # Port komunikasi aplikasi (Java)
+      - "15672:15672" # Port Dashboard Management (Browser)
+    environment:
+      # Mapping variabel dari file .env Anda ke variabel asli Image RabbitMQ
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    networks:
+      - perpustakaan-network # Sesuaikan dengan nama network di docker-compose Anda
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ==========================================
   # 5. API GATEWAY
   # ==========================================
 
@@ -191,7 +214,7 @@ services:
     restart: unless-stopped
 
   # ==========================================
-  # 6. MICROSERVICES (CORE)
+  # 7. MICROSERVICES (CORE)
   # ==========================================
 
   service-anggota:
