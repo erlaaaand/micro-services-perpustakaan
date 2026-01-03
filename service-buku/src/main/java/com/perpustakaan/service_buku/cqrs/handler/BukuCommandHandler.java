@@ -9,7 +9,8 @@ import com.perpustakaan.service_buku.repository.command.BukuCommandRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +25,17 @@ public class BukuCommandHandler {
     private BukuCommandRepository bukuRepository;
     
     @Autowired
-    private ApplicationEventPublisher eventPublisher; // Ganti RabbitTemplate
+    private RabbitTemplate rabbitTemplate;
+
+    @Value("${perpustakaan.rabbitmq.exchange}")
+    private String exchange;
+
+    @Value("${perpustakaan.rabbitmq.routing-key}")
+    private String routingKey;
     
     @Transactional
     public Buku handle(CreateBukuCommand command) {
-        logger.info("Handling CreateBukuCommand for kode: {}", command.getKodeBuku());
+        logger.info("Handle RabbitMQ Event: Handling CreateBukuCommand for kode: {}", command.getKodeBuku());
 
         Buku existing = bukuRepository.findByKodeBuku(command.getKodeBuku());
         if (existing != null) {
@@ -51,7 +58,7 @@ public class BukuCommandHandler {
     
     @Transactional
     public Buku handle(UpdateBukuCommand command) {
-        logger.info("Handling UpdateBukuCommand for ID: {}", command.getId());
+        logger.info("Published RabbitMQ Event: Handling UpdateBukuCommand for ID: {}", command.getId());
         
         Optional<Buku> existing = bukuRepository.findById(command.getId());
         if (existing.isEmpty()) {
@@ -81,7 +88,7 @@ public class BukuCommandHandler {
     
     @Transactional
     public void handle(DeleteBukuCommand command) {
-        logger.info("Handling DeleteBukuCommand for ID: {}", command.getId());
+        logger.info("Published RabbitMQ Event: Handling DeleteBukuCommand for ID: {}", command.getId());
         
         if (!bukuRepository.existsById(command.getId())) {
             throw new IllegalArgumentException("Buku tidak ditemukan dengan ID: " + command.getId());
@@ -100,8 +107,8 @@ public class BukuCommandHandler {
             buku.getPenerbit(),
             buku.getTahunTerbit()
         );
-        eventPublisher.publishEvent(event);
-        logger.info("Published Internal BukuCreatedEvent for ID: {}", buku.getId());
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: Internal BukuCreatedEvent for ID: {}", buku.getId());
     }
     
     private void publishBukuUpdatedEvent(Buku buku) {
@@ -113,13 +120,13 @@ public class BukuCommandHandler {
             buku.getPenerbit(),
             buku.getTahunTerbit()
         );
-        eventPublisher.publishEvent(event);
-        logger.info("Published Internal BukuUpdatedEvent for ID: {}", buku.getId());
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: BukuUpdatedEvent for ID: {}", buku.getId());
     }
     
     private void publishBukuDeletedEvent(Long id) {
         BukuDeletedEvent event = new BukuDeletedEvent(id);
-        eventPublisher.publishEvent(event);
-        logger.info("Published Internal BukuDeletedEvent for ID: {}", id);
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event:BukuDeletedEvent for ID: {}", id);
     }
 }
