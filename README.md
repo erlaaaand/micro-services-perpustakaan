@@ -1,610 +1,151 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Microservices Perpustakaan</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+# 📚 Sistem Microservices Perpustakaan
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            line-height: 1.6;
-        }
+<div align="center">
 
-        /* Navigation Bar */
-        .navbar {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-            padding: 15px 0;
-        }
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen?style=for-the-badge&logo=spring-boot)
+![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=java)
+![MongoDB](https://img.shields.io/badge/MongoDB-6.0-green?style=for-the-badge&logo=mongodb)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.13-orange?style=for-the-badge&logo=rabbitmq)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-        }
+**Sistem manajemen perpustakaan enterprise-grade dengan arsitektur microservices, implementasi CQRS pattern, Event-Driven Architecture menggunakan RabbitMQ, CI/CD pipeline, dan monitoring terdistribusi**
 
-        .nav-logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
-        }
+[Fitur](#-fitur-utama) • [Arsitektur](#-arsitektur-sistem) • [Quick Start](#-quick-start) • [Dokumentasi](#-dokumentasi-api) • [Monitoring](#-monitoring--observability)
 
-        .nav-links {
-            display: flex;
-            gap: 25px;
-            list-style: none;
-        }
+</div>
 
-        .nav-links a {
-            text-decoration: none;
-            color: #333;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
+---
 
-        .nav-links a:hover {
-            color: #667eea;
-        }
+## 🎯 Fitur Utama
 
-        /* Container */
-        .container {
-            max-width: 1200px;
-            margin: 80px auto 40px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }
+<table>
+<tr>
+<td width="50%">
 
-        /* Header with Typing Effect */
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 60px 40px;
-            text-align: center;
-            color: white;
-        }
+### 🏗️ **Architecture & Patterns**
+- ✅ **CQRS Pattern** - Command Query Responsibility Segregation
+- ✅ **Event-Driven Architecture** - Asynchronous messaging dengan RabbitMQ
+- ✅ **Message Broker** - RabbitMQ untuk inter-service communication
+- ✅ **Service Discovery** - Netflix Eureka
+- ✅ **API Gateway** - Spring Cloud Gateway dengan routing
+- ✅ **Circuit Breaker** - Resilience4j untuk fault tolerance
+- ✅ **Load Balancing** - Client-side load balancing
 
-        .typing-title {
-            font-size: 42px;
-            font-weight: bold;
-            min-height: 60px;
-            margin-bottom: 20px;
-        }
+</td>
+<td width="50%">
 
-        .typing-cursor {
-            display: inline-block;
-            width: 3px;
-            background: white;
-            animation: blink 1s infinite;
-        }
+### 🔧 **DevOps & Operations**
+- ✅ **CI/CD Pipeline** - Jenkins automation
+- ✅ **Containerization** - Docker & Docker Compose
+- ✅ **Distributed Logging** - ELK Stack (Elasticsearch, Logstash, Kibana)
+- ✅ **Message Queue Monitoring** - RabbitMQ Management UI
+- ✅ **Health Monitoring** - Spring Boot Actuator
+- ✅ **API Documentation** - OpenAPI/Swagger aggregation
+- ✅ **Graceful Shutdown** - Zero-downtime deployments
 
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
+</td>
+</tr>
+</table>
 
-        .subtitle {
-            font-size: 18px;
-            opacity: 0.9;
-            max-width: 800px;
-            margin: 0 auto;
-        }
+---
 
-        .badges {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 25px;
-            flex-wrap: wrap;
-        }
+## 🏛️ Arsitektur Sistem
 
-        .badge {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            backdrop-filter: blur(10px);
-        }
+```mermaid
+graph TB
+    Client[Client Application]
+    
+    Client --> Gateway[API Gateway :8080]
+    
+    Gateway --> Eureka[Eureka Server :8761<br/>Service Discovery]
+    
+    Gateway --> SA[Service Anggota :8081<br/>H2 + MongoDB]
+    Gateway --> SB[Service Buku :8082<br/>H2 + MongoDB]
+    Gateway --> SP[Service Peminjaman :8083<br/>H2 + MongoDB]
+    Gateway --> SR[Service Pengembalian :8084<br/>H2 + MongoDB]
+    
+    SP -.Inter-service.-> SA
+    SP -.Inter-service.-> SB
+    SR -.Inter-service.-> SP
+    
+    SA --> WriteDB[(H2 Database<br/>Write Model)]
+    SA --> ReadDB[(MongoDB<br/>Read Model)]
+    
+    SA -->|Publish Event| RMQ[RabbitMQ :5672<br/>Message Broker]
+    SB -->|Publish Event| RMQ
+    SP -->|Publish Event| RMQ
+    SR -->|Publish Event| RMQ
+    
+    RMQ -->|Subscribe Event| SA
+    RMQ -->|Subscribe Event| SB
+    RMQ -->|Subscribe Event| SP
+    RMQ -->|Subscribe Event| SR
+    
+    RMQ -.Sync.-> ReadDB
+    
+    Gateway --> ELK[ELK Stack<br/>Elasticsearch + Logstash + Kibana]
+    SA --> ELK
+    SB --> ELK
+    SP --> ELK
+    SR --> ELK
+    
+    RMQMgmt[RabbitMQ Management :15672]
+    RMQ --> RMQMgmt
+    
+    style Gateway fill:#4CAF50
+    style Eureka fill:#2196F3
+    style SA fill:#FF9800
+    style SB fill:#FF9800
+    style SP fill:#FF9800
+    style SR fill:#FF9800
+    style RMQ fill:#FF6600
+    style RMQMgmt fill:#FF6600
+    style ELK fill:#9C27B0
+```
 
-        /* Content */
-        .content {
-            padding: 40px;
-        }
+### 📦 Komponen Utama
 
-        .section {
-            margin-bottom: 50px;
-        }
+| Komponen | Port | Teknologi | Fungsi |
+|----------|------|-----------|--------|
+| **Eureka Server** | 8761 | Spring Cloud Netflix | Service Registry & Discovery |
+| **API Gateway** | 8080 | Spring Cloud Gateway | Routing, Load Balancing, Circuit Breaker |
+| **Service Anggota** | 8081 | Spring Boot + CQRS | Manajemen data anggota perpustakaan |
+| **Service Buku** | 8082 | Spring Boot + CQRS | Manajemen katalog buku |
+| **Service Peminjaman** | 8083 | Spring Boot + CQRS | Transaksi peminjaman buku |
+| **Service Pengembalian** | 8084 | Spring Boot + CQRS | Proses pengembalian & denda |
+| **RabbitMQ** | 5672 | RabbitMQ 3.13 | Message Broker untuk Event-Driven Architecture |
+| **RabbitMQ Management** | 15672 | RabbitMQ Management | Web UI untuk monitoring queue & exchange |
+| **MongoDB** | 27017 | MongoDB 6.0 | Read Model Database (CQRS) |
+| **Elasticsearch** | 9200 | Elastic 8.11 | Log storage & indexing |
+| **Logstash** | 5000 | Logstash 8.11 | Log processing pipeline |
+| **Kibana** | 5601 | Kibana 8.11 | Log visualization dashboard |
+| **Jenkins** | 9000 | Jenkins LTS | CI/CD Automation |
 
-        .section-title {
-            font-size: 32px;
-            color: #667eea;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #667eea;
-        }
+---
 
-        /* Grid Layout for Features */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 25px;
-        }
+## 🚀 Quick Start
 
-        .feature-card {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-        }
+### Prerequisites
 
-        .feature-card:hover {
-            transform: translateY(-5px);
-        }
+```bash
+# Required software
+- Java 17 or higher
+- Maven 3.9+
+- Docker 20.10+
+- Docker Compose v2+
 
-        .feature-card h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
+# System requirements
+- RAM: 8GB minimum (16GB recommended)
+- CPU: 4 cores minimum
+- Disk: 20GB free space
+```
 
-        .feature-card ul {
-            list-style: none;
-            padding-left: 0;
-        }
+### 🔥 One-Command Setup
 
-        .feature-card li {
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-        }
-
-        .feature-card li:last-child {
-            border-bottom: none;
-        }
-
-        /* Tech Stack Table */
-        .tech-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .tech-table thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .tech-table th {
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-        }
-
-        .tech-table td {
-            padding: 15px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .tech-table tbody tr:hover {
-            background: #f5f7fa;
-        }
-
-        .tech-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Accordion/Collapsible */
-        .accordion {
-            margin: 20px 0;
-        }
-
-        .accordion-item {
-            background: #f8f9fa;
-            margin-bottom: 15px;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .accordion-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 18px 25px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 600;
-            transition: background 0.3s;
-        }
-
-        .accordion-header:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
-        }
-
-        .accordion-icon {
-            transition: transform 0.3s;
-            font-size: 20px;
-        }
-
-        .accordion-item.active .accordion-icon {
-            transform: rotate(180deg);
-        }
-
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-        }
-
-        .accordion-item.active .accordion-content {
-            max-height: 2000px;
-            transition: max-height 0.5s ease-in;
-        }
-
-        .accordion-body {
-            padding: 25px;
-            background: white;
-        }
-
-        /* Code Blocks */
-        .code-block {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 20px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 15px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .code-block pre {
-            margin: 0;
-        }
-
-        /* Architecture Diagram */
-        .diagram-container {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            margin: 25px 0;
-        }
-
-        .diagram-placeholder {
-            background: white;
-            padding: 60px;
-            border-radius: 10px;
-            border: 2px dashed #667eea;
-            color: #667eea;
-            font-size: 18px;
-        }
-
-        /* Quick Links */
-        .quick-links {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 25px;
-        }
-
-        .quick-link {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-decoration: none;
-            text-align: center;
-            font-weight: 600;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .quick-link:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-
-        /* Footer */
-        .footer {
-            background: #2d2d2d;
-            color: white;
-            text-align: center;
-            padding: 30px;
-            margin-top: 40px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
-            .typing-title {
-                font-size: 28px;
-            }
-
-            .section-title {
-                font-size: 24px;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Scroll to Top Button */
-        .scroll-top {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
-            z-index: 999;
-        }
-
-        .scroll-top.visible {
-            opacity: 1;
-        }
-
-        .scroll-top:hover {
-            transform: translateY(-5px);
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">📚 Perpustakaan MS</div>
-            <ul class="nav-links">
-                <li><a href="#features">Fitur</a></li>
-                <li><a href="#architecture">Arsitektur</a></li>
-                <li><a href="#quickstart">Quick Start</a></li>
-                <li><a href="#api">API</a></li>
-                <li><a href="#monitoring">Monitoring</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="typing-title" id="typingTitle"></div>
-            <p class="subtitle">Sistem manajemen perpustakaan enterprise-grade dengan arsitektur microservices, implementasi CQRS pattern, Event-Driven Architecture menggunakan RabbitMQ, CI/CD pipeline, dan monitoring terdistribusi</p>
-            <div class="badges">
-                <span class="badge">Spring Boot 3.2.5</span>
-                <span class="badge">Java 17</span>
-                <span class="badge">MongoDB 6.0</span>
-                <span class="badge">RabbitMQ 3.13</span>
-                <span class="badge">Docker Ready</span>
-                <span class="badge">MIT License</span>
-            </div>
-        </div>
-
-        <!-- Content -->
-        <div class="content">
-            <!-- Quick Links -->
-            <section class="section" id="quicklinks">
-                <h2 class="section-title">🚀 Quick Links</h2>
-                <div class="quick-links">
-                    <a href="#features" class="quick-link">📋 Fitur Utama</a>
-                    <a href="#architecture" class="quick-link">🏛️ Arsitektur</a>
-                    <a href="#quickstart" class="quick-link">⚡ Quick Start</a>
-                    <a href="#api" class="quick-link">📖 Dokumentasi API</a>
-                    <a href="#monitoring" class="quick-link">📊 Monitoring</a>
-                    <a href="#troubleshooting" class="quick-link">🐛 Troubleshooting</a>
-                </div>
-            </section>
-
-            <!-- Features -->
-            <section class="section" id="features">
-                <h2 class="section-title">🎯 Fitur Utama</h2>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <h3>🏗️ Architecture & Patterns</h3>
-                        <ul>
-                            <li>✅ CQRS Pattern</li>
-                            <li>✅ Event-Driven Architecture</li>
-                            <li>✅ Message Broker - RabbitMQ</li>
-                            <li>✅ Service Discovery - Eureka</li>
-                            <li>✅ API Gateway - Spring Cloud</li>
-                            <li>✅ Circuit Breaker - Resilience4j</li>
-                            <li>✅ Load Balancing</li>
-                        </ul>
-                    </div>
-                    <div class="feature-card">
-                        <h3>🔧 DevOps & Operations</h3>
-                        <ul>
-                            <li>✅ CI/CD Pipeline - Jenkins</li>
-                            <li>✅ Containerization - Docker</li>
-                            <li>✅ Distributed Logging - ELK</li>
-                            <li>✅ Message Queue Monitoring</li>
-                            <li>✅ Health Monitoring</li>
-                            <li>✅ API Documentation - Swagger</li>
-                            <li>✅ Graceful Shutdown</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Tech Stack Table -->
-            <section class="section" id="techstack">
-                <h2 class="section-title">📦 Tech Stack & Components</h2>
-                <table class="tech-table">
-                    <thead>
-                        <tr>
-                            <th>Komponen</th>
-                            <th>Port</th>
-                            <th>Teknologi</th>
-                            <th>Fungsi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Eureka Server</strong></td>
-                            <td>8761</td>
-                            <td>Spring Cloud Netflix</td>
-                            <td>Service Registry & Discovery</td>
-                        </tr>
-                        <tr>
-                            <td><strong>API Gateway</strong></td>
-                            <td>8080</td>
-                            <td>Spring Cloud Gateway</td>
-                            <td>Routing, Load Balancing</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Service Anggota</strong></td>
-                            <td>8081</td>
-                            <td>Spring Boot + CQRS</td>
-                            <td>Manajemen data anggota</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Service Buku</strong></td>
-                            <td>8082</td>
-                            <td>Spring Boot + CQRS</td>
-                            <td>Manajemen katalog buku</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Service Peminjaman</strong></td>
-                            <td>8083</td>
-                            <td>Spring Boot + CQRS</td>
-                            <td>Transaksi peminjaman</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Service Pengembalian</strong></td>
-                            <td>8084</td>
-                            <td>Spring Boot + CQRS</td>
-                            <td>Proses pengembalian & denda</td>
-                        </tr>
-                        <tr>
-                            <td><strong>RabbitMQ</strong></td>
-                            <td>5672</td>
-                            <td>RabbitMQ 3.13</td>
-                            <td>Message Broker</td>
-                        </tr>
-                        <tr>
-                            <td><strong>RabbitMQ Management</strong></td>
-                            <td>15672</td>
-                            <td>RabbitMQ UI</td>
-                            <td>Monitoring queue & exchange</td>
-                        </tr>
-                        <tr>
-                            <td><strong>MongoDB</strong></td>
-                            <td>27017</td>
-                            <td>MongoDB 6.0</td>
-                            <td>Read Model Database</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Elasticsearch</strong></td>
-                            <td>9200</td>
-                            <td>Elastic 8.11</td>
-                            <td>Log storage & indexing</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Kibana</strong></td>
-                            <td>5601</td>
-                            <td>Kibana 8.11</td>
-                            <td>Log visualization</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Jenkins</strong></td>
-                            <td>9000</td>
-                            <td>Jenkins LTS</td>
-                            <td>CI/CD Automation</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-
-            <!-- Architecture -->
-            <section class="section" id="architecture">
-                <h2 class="section-title">🏛️ Arsitektur Sistem</h2>
-                <div class="diagram-container">
-                    <div class="diagram-placeholder">
-                        <strong>Diagram Arsitektur Microservices</strong><br><br>
-                        Client → API Gateway → Eureka<br>
-                        ↓<br>
-                        Services (Anggota, Buku, Peminjaman, Pengembalian)<br>
-                        ↓<br>
-                        RabbitMQ (Event-Driven) ↔ MongoDB (Read Model)<br>
-                        ↓<br>
-                        ELK Stack (Logging & Monitoring)
-                    </div>
-                </div>
-            </section>
-
-            <!-- Quick Start with Accordion -->
-            <section class="section" id="quickstart">
-                <h2 class="section-title">⚡ Quick Start</h2>
-                
-                <div class="accordion">
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>Prerequisites & Requirements</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <h4>Required Software:</h4>
-                                <ul>
-                                    <li>Java 17 or higher</li>
-                                    <li>Maven 3.9+</li>
-                                    <li>Docker 20.10+</li>
-                                    <li>Docker Compose v2+</li>
-                                </ul>
-                                <h4>System Requirements:</h4>
-                                <ul>
-                                    <li>RAM: 8GB minimum (16GB recommended)</li>
-                                    <li>CPU: 4 cores minimum</li>
-                                    <li>Disk: 20GB free space</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>🔥 One-Command Setup</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <div class="code-block">
-<pre># Clone repository
-git clone &lt;repository-url&gt;
+```bash
+# Clone repository
+git clone <repository-url>
 cd perpustakaan-microservices
 
 # Build semua services
@@ -614,145 +155,119 @@ cd perpustakaan-microservices
 docker-compose up -d
 
 # Verifikasi health status
-./deploy.sh health</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+./deploy.sh health
+```
 
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>📊 Verification URLs</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <ul>
-                                    <li><strong>Eureka Dashboard:</strong> <a href="http://localhost:8761" target="_blank">http://localhost:8761</a></li>
-                                    <li><strong>API Gateway:</strong> <a href="http://localhost:8080" target="_blank">http://localhost:8080</a></li>
-                                    <li><strong>Swagger UI:</strong> <a href="http://localhost:8080/swagger-ui.html" target="_blank">http://localhost:8080/swagger-ui.html</a></li>
-                                    <li><strong>RabbitMQ Management:</strong> <a href="http://localhost:15672" target="_blank">http://localhost:15672</a> (guest/guest)</li>
-                                    <li><strong>Kibana Logs:</strong> <a href="http://localhost:5601" target="_blank">http://localhost:5601</a></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+### 📊 Verification
 
-            <!-- API Documentation with Accordion -->
-            <section class="section" id="api">
-                <h2 class="section-title">📖 Dokumentasi API</h2>
-                
-                <div class="accordion">
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>🔹 Service Anggota (Member Management)</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <p><strong>Base URL:</strong> <code>http://localhost:8080/api/anggota</code></p>
-                                
-                                <h4>Create Member</h4>
-                                <div class="code-block">
-<pre>POST /api/anggota
-Content-Type: application/json
+Setelah startup (tunggu ~2-3 menit), akses:
 
+- **Eureka Dashboard**: http://localhost:8761
+- **API Gateway**: http://localhost:8080
+- **Swagger UI Gateway**: http://localhost:8080/swagger-ui.html
+- **RabbitMQ Management**: http://localhost:15672 (username: `guest`, password: `guest`)
+- **Kibana Logs**: http://localhost:5601
+
+---
+
+## 🎨 CQRS Pattern Implementation
+
+Sistem ini mengimplementasikan **CQRS (Command Query Responsibility Segregation)** untuk memisahkan operasi write dan read:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT REQUEST                        │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+          ┌───────────────────────────────┐
+          │      API Gateway (8080)       │
+          └───────────────────────────────┘
+                          │
+          ┌───────────────┴────────────────┐
+          │                                │
+          ▼                                ▼
+┌─────────────────┐              ┌─────────────────┐
+│    COMMAND      │              │     QUERY       │
+│   (Write/H2)    │              │  (Read/Mongo)   │
+│                 │              │                 │
+│ - Create        │              │ - Get by ID     │
+│ - Update        │──RabbitMQ───▶│ - Get All      │
+│ - Delete        │   Events     │ - Search        │
+└─────────────────┘              └─────────────────┘
+```
+
+**Keuntungan CQRS:**
+- ✅ Scalability: Read & Write dapat di-scale independent
+- ✅ Performance: Optimasi query untuk read operations
+- ✅ Flexibility: Model berbeda untuk Command & Query
+- ✅ Event Sourcing Ready: Event-driven synchronization via RabbitMQ
+
+---
+
+## 🐰 RabbitMQ Event-Driven Architecture
+
+### Event Flow
+
+Sistem menggunakan RabbitMQ untuk asynchronous event publishing dan consuming:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    EVENT FLOW                             │
+└──────────────────────────────────────────────────────────┘
+
+Command Service                RabbitMQ                Read Service
+┌─────────────┐              ┌─────────┐              ┌─────────────┐
+│             │              │         │              │             │
+│  CREATE/    │    Publish   │ Exchange│   Consume    │   Update    │
+│  UPDATE/    │─────Event───▶│    +    │────Event────▶│   MongoDB   │
+│  DELETE     │              │  Queue  │              │ Read Model  │
+│             │              │         │              │             │
+└─────────────┘              └─────────┘              └─────────────┘
+```
+
+### Exchange & Queue Configuration
+
+Setiap service memiliki konfigurasi exchange dan queue sendiri:
+
+**Service Anggota**
+- Exchange: `anggota.exchange` (Topic)
+- Queue: `anggota.queue`
+- Routing Keys: 
+  - `anggota.created`
+  - `anggota.updated`
+  - `anggota.deleted`
+
+**Service Buku**
+- Exchange: `buku.exchange` (Topic)
+- Queue: `buku.queue`
+- Routing Keys:
+  - `buku.created`
+  - `buku.updated`
+  - `buku.deleted`
+
+**Service Peminjaman**
+- Exchange: `peminjaman.exchange` (Topic)
+- Queue: `peminjaman.queue`
+- Routing Keys:
+  - `peminjaman.created`
+  - `peminjaman.updated`
+  - `peminjaman.deleted`
+
+**Service Pengembalian**
+- Exchange: `pengembalian.exchange` (Topic)
+- Queue: `pengembalian.queue`
+- Routing Keys:
+  - `pengembalian.created`
+  - `pengembalian.updated`
+  - `pengembalian.deleted`
+
+### Event Structure
+
+Contoh event yang dipublikasikan ke RabbitMQ:
+
+```json
 {
-  "nomorAnggota": "A001",
-  "nama": "John Doe",
-  "alamat": "Jl. Merdeka No. 123",
-  "email": "john@example.com"
-}
-
-Response: 201 Created
-Event Published: anggota.created → RabbitMQ</pre>
-                                </div>
-
-                                <h4>Get All Members</h4>
-                                <div class="code-block">
-<pre>GET /api/anggota?page=0&size=10&sortBy=nama
-
-Data source: MongoDB (Read Model)</pre>
-                                </div>
-
-                                <h4>Get Member by ID</h4>
-                                <div class="code-block">
-<pre>GET /api/anggota/{id}
-
-Data source: MongoDB (Read Model)</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>🔹 Service Buku (Book Catalog)</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <p><strong>Base URL:</strong> <code>http://localhost:8080/api/buku</code></p>
-                                
-                                <h4>Create Book</h4>
-                                <div class="code-block">
-<pre>POST /api/buku
-Content-Type: application/json
-
-{
-  "kodeBuku": "BK-001",
-  "judul": "Java Programming",
-  "pengarang": "John Doe",
-  "penerbit": "Erlangga",
-  "tahunTerbit": 2020
-}
-
-Event Published: buku.created → RabbitMQ</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>🔹 Service Peminjaman (Borrowing)</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <p><strong>Base URL:</strong> <code>http://localhost:8080/api/peminjaman</code></p>
-                                
-                                <h4>Create Borrowing Transaction</h4>
-                                <div class="code-block">
-<pre>POST /api/peminjaman
-Content-Type: application/json
-
-{
-  "anggotaId": 1,
-  "bukuId": 1,
-  "tanggalPinjam": "2024-01-01",
-  "tanggalKembali": "2024-01-15",
-  "status": "DIPINJAM"
-}
-
-Event Published: peminjaman.created → RabbitMQ</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>📝 Event Structure Example</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <p>Contoh event yang dipublikasikan ke RabbitMQ:</p>
-                                <div class="code-block">
-<pre>{
   "eventId": "uuid-v4",
   "eventType": "ANGGOTA_CREATED",
   "timestamp": "2024-01-15T10:30:00Z",
@@ -763,83 +278,230 @@ Event Published: peminjaman.created → RabbitMQ</pre>
     "alamat": "Jl. Merdeka No. 123",
     "email": "john@example.com"
   }
-}</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+}
+```
 
-            <!-- Monitoring -->
-            <section class="section" id="monitoring">
-                <h2 class="section-title">🔍 Monitoring & Observability</h2>
-                
-                <div class="accordion">
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>🐰 RabbitMQ Monitoring</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <p><strong>RabbitMQ Management UI:</strong> <a href="http://localhost:15672" target="_blank">http://localhost:15672</a></p>
-                                <p><strong>Login:</strong> guest / guest</p>
-                                
-                                <h4>Monitor Queue Activity:</h4>
-                                <ol>
-                                    <li>Klik <strong>Queues</strong> tab</li>
-                                    <li>Monitor metrics: Ready, Unacked, Total messages</li>
-                                    <li>Check Publish/Deliver Rate</li>
-                                </ol>
+### RabbitMQ Management UI
 
-                                <h4>Exchange Configuration:</h4>
-                                <ul>
-                                    <li><strong>anggota.exchange</strong> (Topic) → anggota.queue</li>
-                                    <li><strong>buku.exchange</strong> (Topic) → buku.queue</li>
-                                    <li><strong>peminjaman.exchange</strong> (Topic) → peminjaman.queue</li>
-                                    <li><strong>pengembalian.exchange</strong> (Topic) → pengembalian.queue</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+Akses **RabbitMQ Management Console** di http://localhost:15672
 
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>📊 ELK Stack (Logging)</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <p><strong>Kibana Dashboard:</strong> <a href="http://localhost:5601" target="_blank">http://localhost:5601</a></p>
-                                
-                                <h4>Setup Index Pattern:</h4>
-                                <ol>
-                                    <li>Buka Kibana → Management → Stack Management</li>
-                                    <li>Pilih <strong>Index Patterns</strong> → <strong>Create index pattern</strong></li>
-                                    <li>Masukkan pattern: <code>logs-*</code></li>
-                                    <li>Pilih timestamp field: <code>@timestamp</code></li>
-                                    <li>Klik <strong>Create index pattern</strong></li>
-                                </ol>
+**Default Credentials:**
+- Username: `guest`
+- Password: `guest`
 
-                                <h4>Search RabbitMQ Events:</h4>
-                                <div class="code-block">
-<pre>message: "Publishing event to RabbitMQ"
-message: "Received event from RabbitMQ"</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+**Features:**
+- 📊 Monitor exchanges dan queues
+- 📈 View message rates dan statistics
+- 🔍 Inspect messages dalam queue
+- ⚙️ Configure bindings dan policies
+- 📉 Performance metrics
 
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>🩺 Health Checks</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <div class="code-block">
-<pre># Check all services
+---
+
+## 📖 Dokumentasi API
+
+### 🔹 Service Anggota (Member Management)
+
+**Base URL**: `http://localhost:8080/api/anggota`
+
+#### Create Member
+```bash
+POST /api/anggota
+Content-Type: application/json
+
+{
+  "nomorAnggota": "A001",
+  "nama": "John Doe",
+  "alamat": "Jl. Merdeka No. 123",
+  "email": "john@example.com"
+}
+
+# Response: 201 Created
+# Event Published: anggota.created → RabbitMQ
+```
+
+#### Get All Members
+```bash
+GET /api/anggota?page=0&size=10&sortBy=nama
+
+# Data source: MongoDB (Read Model)
+```
+
+#### Get Member by ID
+```bash
+GET /api/anggota/{id}
+
+# Data source: MongoDB (Read Model)
+```
+
+#### Update Member
+```bash
+PUT /api/anggota/{id}
+Content-Type: application/json
+
+{
+  "nomorAnggota": "A001",
+  "nama": "John Doe Updated",
+  "alamat": "Jl. Updated No. 456",
+  "email": "john.updated@example.com"
+}
+
+# Response: 200 OK
+# Event Published: anggota.updated → RabbitMQ
+```
+
+#### Delete Member
+```bash
+DELETE /api/anggota/{id}
+
+# Response: 204 No Content
+# Event Published: anggota.deleted → RabbitMQ
+```
+
+---
+
+### 🔹 Service Buku (Book Catalog)
+
+**Base URL**: `http://localhost:8080/api/buku`
+
+#### Create Book
+```bash
+POST /api/buku
+Content-Type: application/json
+
+{
+  "kodeBuku": "BK-001",
+  "judul": "Java Programming",
+  "pengarang": "John Doe",
+  "penerbit": "Erlangga",
+  "tahunTerbit": 2020
+}
+
+# Event Published: buku.created → RabbitMQ
+```
+
+#### Get All Books
+```bash
+GET /api/buku?page=0&size=10&sortBy=judul
+
+# Data source: MongoDB (Read Model)
+```
+
+---
+
+### 🔹 Service Peminjaman (Borrowing)
+
+**Base URL**: `http://localhost:8080/api/peminjaman`
+
+#### Create Borrowing Transaction
+```bash
+POST /api/peminjaman
+Content-Type: application/json
+
+{
+  "anggotaId": 1,
+  "bukuId": 1,
+  "tanggalPinjam": "2024-01-01",
+  "tanggalKembali": "2024-01-15",
+  "status": "DIPINJAM"
+}
+
+# Event Published: peminjaman.created → RabbitMQ
+```
+
+#### Get Borrowing with Details (Inter-service call)
+```bash
+GET /api/peminjaman/{id}
+
+# Response includes aggregated data:
+{
+  "peminjaman": { ... },
+  "anggota": { "nama": "John Doe", ... },
+  "buku": { "judul": "Java Programming", ... }
+}
+
+# Data source: MongoDB (Read Model)
+```
+
+---
+
+### 🔹 Service Pengembalian (Return & Fines)
+
+**Base URL**: `http://localhost:8080/api/pengembalian`
+
+#### Create Return Transaction
+```bash
+POST /api/pengembalian
+Content-Type: application/json
+
+{
+  "peminjamanId": 1,
+  "tanggalDikembalikan": "2024-01-20",
+  "terlambat": 5,
+  "denda": 25000.0
+}
+
+# Event Published: pengembalian.created → RabbitMQ
+```
+
+---
+
+## 🔍 Monitoring & Observability
+
+### 🐰 RabbitMQ Monitoring
+
+**RabbitMQ Management UI**: http://localhost:15672
+
+#### Monitor Queue Activity
+1. Login dengan credentials: `guest` / `guest`
+2. Klik **Queues** tab
+3. Monitor metrics:
+   - **Ready**: Messages ready untuk diproses
+   - **Unacked**: Messages sedang diproses
+   - **Total**: Total messages dalam queue
+   - **Publish/Deliver Rate**: Message throughput
+
+#### View Exchange Bindings
+1. Klik **Exchanges** tab
+2. Pilih exchange (contoh: `anggota.exchange`)
+3. View bindings ke queues
+4. Monitor message routing
+
+#### Inspect Messages
+1. Klik queue name (contoh: `anggota.queue`)
+2. Scroll ke **Get messages** section
+3. Klik **Get Message(s)** untuk preview message content
+
+### 📊 ELK Stack (Logging)
+
+**Kibana Dashboard**: http://localhost:5601
+
+#### Setup Index Pattern
+1. Buka Kibana → Management → Stack Management
+2. Pilih **Index Patterns** → **Create index pattern**
+3. Masukkan pattern: `logs-*`
+4. Pilih timestamp field: `@timestamp`
+5. Klik **Create index pattern**
+
+#### View Logs
+1. Buka **Discover** menu
+2. Filter berdasarkan service:
+   ```
+   app_name: "service-anggota"
+   app_name: "service-buku"
+   ```
+3. Gunakan KQL query untuk searching
+
+#### Search RabbitMQ Events
+```
+message: "Publishing event to RabbitMQ"
+message: "Received event from RabbitMQ"
+```
+
+### 🩺 Health Checks
+
+```bash
+# Check all services
 ./deploy.sh health
 
 # Individual service health
@@ -847,30 +509,135 @@ curl http://localhost:8761/actuator/health  # Eureka
 curl http://localhost:8080/actuator/health  # Gateway
 curl http://localhost:8081/actuator/health  # Service Anggota
 curl http://localhost:8082/actuator/health  # Service Buku
+curl http://localhost:8083/actuator/health  # Service Peminjaman
+curl http://localhost:8084/actuator/health  # Service Pengembalian
 
 # Check RabbitMQ health
-curl http://localhost:15672/api/health/checks/alarms</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+curl http://localhost:15672/api/health/checks/alarms  # Requires auth
+```
 
-            <!-- Troubleshooting -->
-            <section class="section" id="troubleshooting">
-                <h2 class="section-title">🐛 Troubleshooting</h2>
-                
-                <div class="accordion">
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>Services Not Starting</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <div class="code-block">
-<pre># Check logs
+---
+
+## 🔧 CI/CD Pipeline
+
+### Jenkins Setup
+
+1. **Akses Jenkins**: http://localhost:9000
+
+2. **Get Initial Password**:
+```bash
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+3. **Install Required Plugins**:
+   - Docker Pipeline
+   - Maven Integration
+   - Git Plugin
+
+4. **Configure Credentials**:
+   - Docker Hub: `docker-hub-credentials`
+   - Username & Password
+
+5. **Create Pipeline**:
+   - New Item → Pipeline
+   - Pipeline script from SCM
+   - Repository URL: `<your-repo-url>`
+   - Script Path: `Jenkinsfile`
+
+### Pipeline Stages
+
+```
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│  Initialize  │──▶│   Checkout   │──▶│ Build & Test │
+└──────────────┘   └──────────────┘   └──────────────┘
+                                              │
+                                              ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│ Health Check │◀──│    Deploy    │◀──│  Push Docker │
+└──────────────┘   └──────────────┘   └──────────────┘
+```
+
+---
+
+## 🛠️ Development Guide
+
+### Build Individual Service
+
+```bash
+cd service-anggota
+mvn clean package -DskipTests
+```
+
+### Run Service Locally
+
+```bash
+# Start infrastructure services first
+docker-compose up -d mongodb rabbitmq
+
+# Start Eureka
+cd eureka-server
+mvn spring-boot:run
+
+# Start other services
+cd service-anggota
+mvn spring-boot:run
+```
+
+### Environment Variables
+
+Buat file `.env` di root project:
+
+```properties
+# Eureka
+EUREKA_SERVER_URL=http://localhost:8761/eureka/
+
+# RabbitMQ
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=guest
+RABBITMQ_PASSWORD=guest
+
+# MongoDB
+MONGODB_URI_ANGGOTA=mongodb://localhost:27017/anggota_db
+MONGODB_URI_BUKU=mongodb://localhost:27017/buku_db
+MONGODB_URI_PEMINJAMAN=mongodb://localhost:27017/peminjaman_db
+MONGODB_URI_PENGEMBALIAN=mongodb://localhost:27017/pengembalian_db
+
+# ELK Stack
+ELASTICSEARCH_HOSTS=http://localhost:9200
+LOGSTASH_HOST=localhost
+LOGSTASH_PORT=5000
+```
+
+### RabbitMQ Configuration Example
+
+```yaml
+# application.yml
+spring:
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        acknowledge-mode: auto
+        prefetch: 1
+        retry:
+          enabled: true
+          initial-interval: 3000
+          max-attempts: 3
+          multiplier: 2
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Services Not Starting
+
+```bash
+# Check logs
 docker-compose logs -f [service-name]
 
 # Restart specific service
@@ -878,186 +645,270 @@ docker-compose restart [service-name]
 
 # Clean rebuild
 docker-compose down
-docker-compose up -d --build</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+docker-compose up -d --build
+```
 
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>RabbitMQ Connection Issues</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <div class="code-block">
-<pre># Check RabbitMQ status
+### RabbitMQ Connection Issues
+
+```bash
+# Check RabbitMQ status
 docker ps | grep rabbitmq
 
 # View RabbitMQ logs
 docker logs rabbitmq
 
+# Access RabbitMQ container
+docker exec -it rabbitmq bash
+
 # Check if queues are created
-docker exec -it rabbitmq rabbitmqctl list_queues
+rabbitmqctl list_queues
 
 # Check exchanges
-docker exec -it rabbitmq rabbitmqctl list_exchanges</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+rabbitmqctl list_exchanges
+```
 
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>Message Not Being Consumed</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <ol>
-                                    <li>Check RabbitMQ Management UI (http://localhost:15672)</li>
-                                    <li>Verify queue has consumers in <strong>Queues</strong> tab</li>
-                                    <li>Check message count: Ready dan Unacked</li>
-                                    <li>View service logs untuk error messages</li>
-                                    <li>Verify exchange-queue binding</li>
-                                </ol>
-                                <div class="code-block">
-<pre>docker-compose logs -f service-anggota</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+### Message Not Being Consumed
 
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>Port Already in Use</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                <div class="code-block">
-<pre># Find process using port (Linux/Mac)
+1. Check RabbitMQ Management UI (http://localhost:15672)
+2. Verify queue has consumers: **Queues** tab → Check **Consumers** column
+3. Check message count: **Ready** dan **Unacked** messages
+4. View service logs untuk error messages:
+   ```bash
+   docker-compose logs -f service-anggota
+   ```
+5. Verify exchange-queue binding di RabbitMQ UI
+
+### Port Already in Use
+
+```bash
+# Find process using port (Linux/Mac)
 lsof -i :8080
 
 # Find process using port (Windows)
 netstat -ano | findstr :8080
 
 # Kill process
-kill -9 &lt;PID&gt;  # Linux/Mac
-taskkill /PID &lt;PID&gt; /F  # Windows</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
+kill -9 <PID>  # Linux/Mac
+taskkill /PID <PID> /F  # Windows
+```
 
-        <!-- Footer -->
-        <div class="footer">
-            <p>📧 Email: blackpenta98@gmail.com</p>
-            <p>Built with Java, Spring Boot, RabbitMQ, and passion for clean architecture</p>
-            <p>&copy; 2024 Sistem Microservices Perpustakaan | MIT License</p>
-        </div>
-    </div>
+### MongoDB Connection Issues
 
-    <!-- Scroll to Top Button -->
-    <div class="scroll-top" id="scrollTop">↑</div>
+```bash
+# Verify MongoDB is running
+docker ps | grep mongodb
 
-    <script>
-        // Typing Effect Animation
-        const title = "📚 Sistem Microservices Perpustakaan";
-        const typingElement = document.getElementById('typingTitle');
-        let index = 0;
+# Check MongoDB logs
+docker logs mongodb
 
-        function typeWriter() {
-            if (index < title.length) {
-                typingElement.innerHTML = title.substring(0, index + 1) + '<span class="typing-cursor">|</span>';
-                index++;
-                setTimeout(typeWriter, 100);
-            } else {
-                typingElement.innerHTML = title;
-            }
-        }
+# Connect to MongoDB shell
+docker exec -it mongodb mongosh
+```
 
-        // Start typing animation when page loads
-        window.addEventListener('load', () => {
-            setTimeout(typeWriter, 500);
-        });
+### Eureka Registration Issues
 
-        // Accordion functionality
-        document.querySelectorAll('.accordion-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const item = header.parentElement;
-                const isActive = item.classList.contains('active');
-                
-                // Close all accordion items
-                document.querySelectorAll('.accordion-item').forEach(acc => {
-                    acc.classList.remove('active');
-                });
-                
-                // Open clicked item if it wasn't active
-                if (!isActive) {
-                    item.classList.add('active');
-                }
-            });
-        });
+1. Tunggu 30-60 detik untuk service registration
+2. Check Eureka dashboard: http://localhost:8761
+3. Verify `eureka.client.register-with-eureka=true` di application.properties
+4. Check network connectivity: `docker network inspect perpustakaan-network`
 
-        // Smooth scroll for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    const offsetTop = target.offsetTop - 80;
-                    window.scrollTo({
-                        top: offsetTop,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
+---
 
-        // Scroll to top button
-        const scrollTopBtn = document.getElementById('scrollTop');
-        
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 300) {
-                scrollTopBtn.classList.add('visible');
-            } else {
-                scrollTopBtn.classList.remove('visible');
-            }
-        });
+## 📂 Project Structure
 
-        scrollTopBtn.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
+```
+perpustakaan-microservices/
+├── 📁 eureka-server/              # Service Discovery
+├── 📁 api-gateway/                # API Gateway & Routing
+├── 📁 service-anggota/            # Member Management (CQRS)
+│   ├── 📁 cqrs/
+│   │   ├── command/              # Write operations
+│   │   ├── query/                # Read operations
+│   │   └── handler/              # Command/Query handlers
+│   ├── 📁 entity/
+│   │   ├── command/              # Write model (H2)
+│   │   └── query/                # Read model (MongoDB)
+│   ├── 📁 repository/
+│   │   ├── command/              # JPA Repository
+│   │   └── query/                # MongoDB Repository
+│   ├── 📁 event/                 # Event definitions
+│   ├── 📁 messaging/
+│   │   ├── publisher/            # RabbitMQ publishers
+│   │   └── consumer/             # RabbitMQ consumers
+│   └── 📁 config/
+│       └── RabbitMQConfig.java   # RabbitMQ configuration
+├── 📁 service-buku/               # Book Catalog (CQRS)
+├── 📁 service-peminjaman/         # Borrowing Service (CQRS)
+├── 📁 service-pengembalian/       # Return Service (CQRS)
+├── 📁 monitoring/
+│   ├── 📁 kibana/                # Kibana config
+│   └── 📁 logstash/              # Logstash pipeline
+├── 📄 docker-compose.yml         # Docker orchestration
+├── 📄 Jenkinsfile                # CI/CD pipeline
+├── 📄 .env.example               # Environment template
+├── 📄 build-all.sh               # Build automation
+└── 📄 deploy.sh                  # Deployment script
+```
 
-        // Add animation on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+---
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
+## 🧪 Testing
 
-        document.querySelectorAll('.section').forEach(section => {
-            section.style.opacity = '0';
-            section.style.transform = 'translateY(20px)';
-            section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-            observer.observe(section);
-        });
-    </script>
-</body>
-</html>
+### Unit Tests
+
+```bash
+# Run tests for specific service
+cd service-anggota
+mvn test
+
+# Run all tests
+mvn clean verify
+```
+
+### Integration Tests
+
+```bash
+# With coverage report
+mvn clean test jacoco:report
+
+# View coverage report
+open target/site/jacoco/index.html
+```
+
+### Testing RabbitMQ Events
+
+```bash
+# Test event publishing
+curl -X POST http://localhost:8080/api/anggota \
+  -H "Content-Type: application/json" \
+  -d '{"nomorAnggota":"A001","nama":"Test User",...}'
+
+# Check RabbitMQ Management UI
+# Verify message appears in queue and gets consumed
+```
+
+### API Testing with Postman
+
+1. Import collection: `postman/perpustakaan-api.json`
+2. Set environment variables
+3. Run test suite
+
+---
+
+## 🔐 Security Notes
+
+⚠️ **Development Mode**: Konfigurasi saat ini untuk development/testing
+
+**Production Checklist**:
+- [ ] Enable Spring Security
+- [ ] Configure JWT authentication
+- [ ] Setup HTTPS/SSL certificates
+- [ ] Use secrets management (Vault)
+- [ ] Enable Actuator security
+- [ ] Configure CORS properly
+- [ ] Setup rate limiting
+- [ ] Enable audit logging
+- [ ] Secure RabbitMQ with strong credentials
+- [ ] Enable RabbitMQ SSL/TLS
+- [ ] Configure RabbitMQ virtual hosts per service
+
+---
+
+## 📈 Performance Tuning
+
+### JVM Options
+
+Edit `JAVA_OPTS` di docker-compose.yml:
+
+```yaml
+environment:
+  - JAVA_OPTS=-Xmx1g -Xms512m -XX:+UseG1GC
+```
+
+### RabbitMQ Tuning
+
+```bash
+# Edit docker-compose.yml
+rabbitmq:
+  environment:
+    - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=512MB
+    - RABBITMQ_CHANNEL_MAX=2048
+```
+
+### MongoDB Indexing
+
+```javascript
+// Connect to MongoDB
+docker exec -it mongodb mongosh
+
+// Create indexes
+use anggota_read_db
+db.anggota_read.createIndex({ "nomorAnggota": 1 })
+db.anggota_read.createIndex({ "email": 1 })
+
+use buku_read_db
+db.buku_read.createIndex({ "kodeBuku": 1 })
+db.buku_read.createIndex({ "judul": "text" })
+```
+
+### Message Processing Optimization
+
+Adjust prefetch count di application.yml:
+
+```yaml
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        prefetch: 10  # Process 10 messages concurrently
+        concurrency: 3  # 3 concurrent consumers
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+---
+
+## 📝 License
+
+This project is licensed under the **MIT License** - see LICENSE file for details.
+
+---
+
+## 🎓 Learning Resources
+
+- [Spring Cloud Documentation](https://spring.io/projects/spring-cloud)
+- [CQRS Pattern](https://martinfowler.com/bliki/CQRS.html)
+- [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)
+- [Event-Driven Architecture](https://martinfowler.com/articles/201701-event-driven.html)
+- [Microservices Architecture](https://microservices.io/)
+- [Docker Documentation](https://docs.docker.com/)
+- [MongoDB Best Practices](https://docs.mongodb.com/manual/)
+
+---
+
+## 📞 Support & Contact
+
+Untuk pertanyaan atau bantuan:
+- 📧 Email: blackpenta98@gmail.com
+- 🐛 Issues: [GitHub Issues](https://github.com/username/repo/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/username/repo/discussions)
+
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#-sistem-microservices-perpustakaan)**
+
+Built using Java, Spring Boot, RabbitMQ, and passion for clean architecture
+
+</div>
