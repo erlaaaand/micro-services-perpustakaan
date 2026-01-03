@@ -4,11 +4,13 @@ import com.perpustakaan.service_peminjaman.entity.query.PeminjamanReadModel;
 import com.perpustakaan.service_peminjaman.repository.query.PeminjamanQueryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Component
+@RabbitListener(queues = "${perpustakaan.rabbitmq.queue}")
 public class PeminjamanEventListener {
 
     private static final Logger logger = LoggerFactory.getLogger(PeminjamanEventListener.class);
@@ -16,9 +18,9 @@ public class PeminjamanEventListener {
     @Autowired
     private PeminjamanQueryRepository queryRepository;
 
-    @EventListener
+    @RabbitHandler
     public void handleCreatedEvent(PeminjamanCreatedEvent event) {
-        logger.info("Syncing Created Peminjaman to MongoDB: {}", event.getId());
+        logger.info("RabbitMQ Listener: Created Peminjaman to MongoDB: {}", event.getId());
         PeminjamanReadModel model = new PeminjamanReadModel();
         model.setId(event.getId());
         model.setAnggotaId(event.getAnggotaId());
@@ -28,23 +30,34 @@ public class PeminjamanEventListener {
         model.setStatus(event.getStatus()); 
         
         queryRepository.save(model);
+        logger.info("RabbitMQ Listener: Successfully synced ID {}", event.getId());
     }
 
-    @EventListener
+    @RabbitHandler
     public void handleUpdatedEvent(PeminjamanUpdatedEvent event) {
-        logger.info("Syncing Updated Peminjaman to MongoDB: {}", event.getId());
-        queryRepository.findById(event.getId()).ifPresent(model -> {
-            model.setStatus(event.getStatus());
-            model.setTanggalKembali(event.getTanggalKembali());
-            queryRepository.save(model);
-        });
+        logger.info("RabbitMQ Listener: Updated Peminjaman to MongoDB: {}", event.getId());
+
+        PeminjamanReadModel model = queryRepository.findById(event.getId())
+            .orElse(new PeminjamanReadModel());
+        
+
+        model.setStatus(event.getStatus());
+        model.setTanggalKembali(null);
+        
+        queryRepository.save(model);
+
+        logger.info("RabbitMQ Listener: Successfully synced ID {}", event.getId());
     }
 
-    @EventListener
+    @RabbitHandler
     public void handleDeletedEvent(PeminjamanDeletedEvent event) {
-        logger.info("Syncing Deleted Peminjaman from MongoDB: {}", event.getId());
+        logger.info("RabbitMQ Listener: Deleted Peminjaman from MongoDB: {}", event.getId());
         if (queryRepository.existsById(event.getId())) {
             queryRepository.deleteById(event.getId());
+        } else {
+            logger.warn("RabbitMQ Listener: Peminjaman ID {} not found for deletion", event.getId());
         }
+
+        logger.info("RabbitMQ Listener: Successfully deleted ID {}", event.getId());
     }
 }

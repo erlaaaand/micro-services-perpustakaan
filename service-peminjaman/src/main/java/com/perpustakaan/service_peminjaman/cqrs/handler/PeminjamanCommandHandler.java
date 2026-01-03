@@ -9,8 +9,10 @@ import com.perpustakaan.service_peminjaman.repository.command.PeminjamanReposito
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +25,17 @@ public class PeminjamanCommandHandler {
     private PeminjamanRepository peminjamanRepository; // JPA Write Repo
 
     @Autowired
-    private ApplicationEventPublisher eventPublisher; // Internal Event
+    private RabbitTemplate rabbitTemplate;
+
+    @Value("${perpustakaan.rabbitmq.exchange}")
+    private String exchange;
+
+    @Value("${perpustakaan.rabbitmq.routing-key}")
+    private String routingKey;
 
     @Transactional
     public Peminjaman handle(CreatePeminjamanCommand command) {
-        logger.info("Handling CreatePeminjamanCommand");
+        logger.info("Handle RabbitMQ Event: Handling CreatePeminjamanCommand");
 
         Peminjaman peminjaman = new Peminjaman();
         peminjaman.setAnggotaId(command.getAnggotaId());
@@ -46,7 +54,7 @@ public class PeminjamanCommandHandler {
 
     @Transactional
     public Peminjaman handle(UpdatePeminjamanCommand command) {
-        logger.info("Handling UpdatePeminjamanCommand ID: {}", command.getId());
+        logger.info("Handle RabbitMQ Event: Handling UpdatePeminjamanCommand ID: {}", command.getId());
 
         Peminjaman peminjaman = peminjamanRepository.findById(command.getId())
             .orElseThrow(() -> new IllegalArgumentException("Peminjaman not found: " + command.getId()));
@@ -64,7 +72,7 @@ public class PeminjamanCommandHandler {
 
     @Transactional
     public Peminjaman handleUpdateStatus(Long id, String status) {
-        logger.info("Handling Update Status ID: {}", id);
+        logger.info("Handle RabbitMQ Event: Handling Update Status ID: {}", id);
 
         Peminjaman peminjaman = peminjamanRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Peminjaman not found: " + id));
@@ -78,7 +86,7 @@ public class PeminjamanCommandHandler {
 
     @Transactional
     public void handle(DeletePeminjamanCommand command) {
-        logger.info("Handling DeletePeminjamanCommand ID: {}", command.getId());
+        logger.info("Handle RabbitMQ Event:Handling DeletePeminjamanCommand ID: {}", command.getId());
 
         if (!peminjamanRepository.existsById(command.getId())) {
             throw new IllegalArgumentException("Peminjaman not found: " + command.getId());
@@ -98,7 +106,8 @@ public class PeminjamanCommandHandler {
             peminjaman.getTanggalPinjam(),
             peminjaman.getStatus()
         );
-        eventPublisher.publishEvent(event);
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: Internal PeminjamanCreatedEvent for ID: {}", peminjaman.getId());
     }
 
     private void publishUpdatedEvent(Peminjaman peminjaman) {
@@ -107,11 +116,13 @@ public class PeminjamanCommandHandler {
             peminjaman.getStatus(),
             peminjaman.getTanggalKembali()
         );
-        eventPublisher.publishEvent(event);
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: PeminjamanUpdatedEvent for ID: {}", peminjaman.getId());
     }
 
     private void publishDeletedEvent(Long id) {
         PeminjamanDeletedEvent event = new PeminjamanDeletedEvent(id);
-        eventPublisher.publishEvent(event);
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: PeminjamanDeletedEvent for ID: {}", id);
     }
 }
