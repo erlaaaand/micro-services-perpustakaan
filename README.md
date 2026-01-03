@@ -825,4 +825,239 @@ Event Published: peminjaman.created → RabbitMQ</pre>
                                 <h4>Search RabbitMQ Events:</h4>
                                 <div class="code-block">
 <pre>message: "Publishing event to RabbitMQ"
-message: "Received event from RabbitMQ
+message: "Received event from RabbitMQ"</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <span>🩺 Health Checks</span>
+                            <span class="accordion-icon">▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-body">
+                                <div class="code-block">
+<pre># Check all services
+./deploy.sh health
+
+# Individual service health
+curl http://localhost:8761/actuator/health  # Eureka
+curl http://localhost:8080/actuator/health  # Gateway
+curl http://localhost:8081/actuator/health  # Service Anggota
+curl http://localhost:8082/actuator/health  # Service Buku
+
+# Check RabbitMQ health
+curl http://localhost:15672/api/health/checks/alarms</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Troubleshooting -->
+            <section class="section" id="troubleshooting">
+                <h2 class="section-title">🐛 Troubleshooting</h2>
+                
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <span>Services Not Starting</span>
+                            <span class="accordion-icon">▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-body">
+                                <div class="code-block">
+<pre># Check logs
+docker-compose logs -f [service-name]
+
+# Restart specific service
+docker-compose restart [service-name]
+
+# Clean rebuild
+docker-compose down
+docker-compose up -d --build</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <span>RabbitMQ Connection Issues</span>
+                            <span class="accordion-icon">▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-body">
+                                <div class="code-block">
+<pre># Check RabbitMQ status
+docker ps | grep rabbitmq
+
+# View RabbitMQ logs
+docker logs rabbitmq
+
+# Check if queues are created
+docker exec -it rabbitmq rabbitmqctl list_queues
+
+# Check exchanges
+docker exec -it rabbitmq rabbitmqctl list_exchanges</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <span>Message Not Being Consumed</span>
+                            <span class="accordion-icon">▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Check RabbitMQ Management UI (http://localhost:15672)</li>
+                                    <li>Verify queue has consumers in <strong>Queues</strong> tab</li>
+                                    <li>Check message count: Ready dan Unacked</li>
+                                    <li>View service logs untuk error messages</li>
+                                    <li>Verify exchange-queue binding</li>
+                                </ol>
+                                <div class="code-block">
+<pre>docker-compose logs -f service-anggota</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <span>Port Already in Use</span>
+                            <span class="accordion-icon">▼</span>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-body">
+                                <div class="code-block">
+<pre># Find process using port (Linux/Mac)
+lsof -i :8080
+
+# Find process using port (Windows)
+netstat -ano | findstr :8080
+
+# Kill process
+kill -9 &lt;PID&gt;  # Linux/Mac
+taskkill /PID &lt;PID&gt; /F  # Windows</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>📧 Email: blackpenta98@gmail.com</p>
+            <p>Built with Java, Spring Boot, RabbitMQ, and passion for clean architecture</p>
+            <p>&copy; 2024 Sistem Microservices Perpustakaan | MIT License</p>
+        </div>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <div class="scroll-top" id="scrollTop">↑</div>
+
+    <script>
+        // Typing Effect Animation
+        const title = "📚 Sistem Microservices Perpustakaan";
+        const typingElement = document.getElementById('typingTitle');
+        let index = 0;
+
+        function typeWriter() {
+            if (index < title.length) {
+                typingElement.innerHTML = title.substring(0, index + 1) + '<span class="typing-cursor">|</span>';
+                index++;
+                setTimeout(typeWriter, 100);
+            } else {
+                typingElement.innerHTML = title;
+            }
+        }
+
+        // Start typing animation when page loads
+        window.addEventListener('load', () => {
+            setTimeout(typeWriter, 500);
+        });
+
+        // Accordion functionality
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const item = header.parentElement;
+                const isActive = item.classList.contains('active');
+                
+                // Close all accordion items
+                document.querySelectorAll('.accordion-item').forEach(acc => {
+                    acc.classList.remove('active');
+                });
+                
+                // Open clicked item if it wasn't active
+                if (!isActive) {
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const offsetTop = target.offsetTop - 80;
+                    window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Scroll to top button
+        const scrollTopBtn = document.getElementById('scrollTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                scrollTopBtn.classList.add('visible');
+            } else {
+                scrollTopBtn.classList.remove('visible');
+            }
+        });
+
+        scrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(20px)';
+            section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>
