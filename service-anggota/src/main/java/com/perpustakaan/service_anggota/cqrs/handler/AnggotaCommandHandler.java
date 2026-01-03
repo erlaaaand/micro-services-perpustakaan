@@ -9,7 +9,8 @@ import com.perpustakaan.service_anggota.repository.command.AnggotaCommandReposit
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher; // Import Baru
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,15 +25,18 @@ public class AnggotaCommandHandler {
     private AnggotaCommandRepository anggotaRepository;
     
     @Autowired
-    private ApplicationEventPublisher eventPublisher; // Ganti RabbitTemplate
-    
-    // Hapus @Value RabbitMQ exchange/routing keys karena tidak dipakai lagi
+    private RabbitTemplate rabbitTemplate;
+
+    @Value("${perpustakaan.rabbitmq.exchange}")
+    private String exchange;
+
+    @Value("${perpustakaan.rabbitmq.routing-key}")
+    private String routingKey;
 
     @Transactional
     public Anggota handle(CreateAnggotaCommand command) {
         logger.info("Handling CreateAnggotaCommand for nomor: {}", command.getNomorAnggota());
         
-        // ... (Validasi & Logika simpan ke Repo Write TETAP SAMA) ...
         Anggota existing = anggotaRepository.findByNomorAnggota(command.getNomorAnggota());
         if (existing != null) {
             throw new IllegalArgumentException("Nomor anggota sudah digunakan: " + command.getNomorAnggota());
@@ -51,11 +55,11 @@ public class AnggotaCommandHandler {
         return saved;
     }
     
-    // ... (Handle Update & Delete TETAP SAMA logika simpannya) ...
     @Transactional
     public Anggota handle(UpdateAnggotaCommand command) {
-         // ... logika update ...
-         // contoh singkat:
+        // Logging
+        logger.info("Handle RabbitMQ Event: Handling UpdateAnggotaCommand for ID: {}", command.getId());
+
          Optional<Anggota> existing = anggotaRepository.findById(command.getId());
          Anggota anggota = existing.get();
          anggota.setNomorAnggota(command.getNomorAnggota());
@@ -70,12 +74,9 @@ public class AnggotaCommandHandler {
 
     @Transactional
     public void handle(DeleteAnggotaCommand command) {
-        // ... logika delete ...
         anggotaRepository.deleteById(command.getId());
         publishAnggotaDeletedEvent(command.getId());
     }
-
-    // --- METHOD PUBLISH YANG DIUBAH ---
 
     private void publishAnggotaCreatedEvent(Anggota anggota) {
         AnggotaCreatedEvent event = new AnggotaCreatedEvent(
@@ -85,8 +86,8 @@ public class AnggotaCommandHandler {
             anggota.getAlamat(),
             anggota.getEmail()
         );
-        eventPublisher.publishEvent(event); // Kirim ke Internal Listener
-        logger.info("Published Internal AnggotaCreatedEvent for ID: {}", anggota.getId());
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: Created ID {}", anggota.getId());
     }
     
     private void publishAnggotaUpdatedEvent(Anggota anggota) {
@@ -97,13 +98,13 @@ public class AnggotaCommandHandler {
             anggota.getAlamat(),
             anggota.getEmail()
         );
-        eventPublisher.publishEvent(event);
-        logger.info("Published Internal AnggotaUpdatedEvent for ID: {}", anggota.getId());
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: Updated ID {}", anggota.getId());
     }
     
     private void publishAnggotaDeletedEvent(Long id) {
         AnggotaDeletedEvent event = new AnggotaDeletedEvent(id);
-        eventPublisher.publishEvent(event);
-        logger.info("Published Internal AnggotaDeletedEvent for ID: {}", id);
+        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+        logger.info("Published RabbitMQ Event: Deleted ID {}", id);
     }
 }
