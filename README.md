@@ -59,116 +59,121 @@
     'background': '#FFFFFF',
     'mainBkg': '#FFFFFF',
     'primaryColor': '#FFFFFF',
-    'primaryTextColor': '#000000',
-    'lineColor': '#000000',
+    'primaryTextColor': '#0f172a',
+    'lineColor': '#334155',
     'tertiaryColor': '#FFFFFF',
-    'clusterBkg': '#FAFAFA'
+    'clusterBkg': '#f8fafc',
+    'edgeLabelBackground': '#ffffff'
   },
   'flowchart': {
-    'curve': 'step',
-    'nodeSpacing': 100,
-    'rankSpacing': 80
+    'curve': 'basis',
+    'nodeSpacing': 120,
+    'rankSpacing': 100,
+    'padding': 20
   }
 }}%%
 
 graph TB
     %% --- STYLE DEFINITIONS ---
-    %% Warna Solid & Kontras Tinggi
-    classDef client fill:#333,stroke:#000,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
-    classDef gateway fill:#16a34a,stroke:#000,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
-    classDef service fill:#2563eb,stroke:#000,stroke-width:2px,color:#fff,rx:5;
-    classDef db fill:#475569,stroke:#000,stroke-width:2px,color:#fff,rx:5;
-    classDef msg fill:#ea580c,stroke:#000,stroke-width:2px,color:#fff,rx:5;
-    classDef monitor fill:#7c3aed,stroke:#000,stroke-width:2px,color:#fff,rx:5;
-    classDef infra fill:#06b6d4,stroke:#000,stroke-width:2px,color:#fff,rx:5;
+    classDef client fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
+    classDef gateway fill:#059669,stroke:#047857,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
+    classDef service fill:#2563eb,stroke:#1d4ed8,stroke-width:2px,color:#fff,rx:5;
+    classDef db fill:#475569,stroke:#334155,stroke-width:2px,color:#fff,rx:5;
+    classDef msg fill:#ea580c,stroke:#c2410c,stroke-width:2px,color:#fff,rx:5;
+    classDef monitor fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#fff,rx:5;
+    classDef infra fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff,rx:5;
 
     %% --- NODES ---
-    
     Client[Client App]:::client
-    Gateway[API Gateway :8080]:::gateway
-    Eureka[Eureka Server :8761]:::infra
+    Gateway[API Gateway<br/>:8080]:::gateway
+    Eureka[Eureka Server<br/>:8761]:::infra
 
     %% GROUP: MICROSERVICES
-    subgraph Services [Microservices]
-        direction TB
-        SA[Service Anggota :8081]:::service
-        SB[Service Buku :8082]:::service
-        SP[Service Peminjaman :8083]:::service
-        SR[Service Pengembalian :8084]:::service
+    subgraph Services ["🔷 Microservices Layer"]
+        direction LR
+        SA[Service<br/>Anggota<br/>:8081]:::service
+        SB[Service<br/>Buku<br/>:8082]:::service
+        SP[Service<br/>Peminjaman<br/>:8083]:::service
+        SR[Service<br/>Pengembalian<br/>:8084]:::service
     end
 
     %% GROUP: DATABASE
-    subgraph Data [Persistence]
-        direction TB
-        WriteDB[(H2 Write Model)]:::db
-        ReadDB[(MongoDB Read Model)]:::db
+    subgraph Data ["💾 Persistence Layer"]
+        direction LR
+        WriteDB[(H2<br/>Write Model)]:::db
+        ReadDB[(MongoDB<br/>Read Model)]:::db
     end
 
     %% GROUP: MESSAGING
-    subgraph Bus [Event Bus]
-        RMQ[RabbitMQ :5672]:::msg
-        RMQMgmt[Mgmt UI :15672]:::msg
+    subgraph Bus ["📨 Event Bus Layer"]
+        direction TB
+        RMQ[RabbitMQ<br/>:5672]:::msg
+        RMQMgmt[Management UI<br/>:15672]:::msg
     end
 
     %% GROUP: OBSERVABILITY
-    subgraph Obs [Observability]
-        ELK[ELK Stack]:::monitor
+    subgraph Obs ["📊 Observability"]
+        ELK[ELK Stack<br/>Logging]:::monitor
     end
 
     %% --- RELATIONS ---
     
     %% Main Flow
-    Client --> Gateway
-    Gateway --> Eureka
+    Client -->|HTTP| Gateway
+    Gateway -.Service Discovery.-> Eureka
     
-    %% Gateway to Services (Dipisah agar tidak numpuk)
-    Gateway --> SA
-    Gateway --> SB
-    Gateway --> SP
-    Gateway --> SR
+    %% Gateway to Services
+    Gateway ==>|Route| SA
+    Gateway ==>|Route| SB
+    Gateway ==>|Route| SP
+    Gateway ==>|Route| SR
 
-    %% Inter-service (Garis Putus-putus)
-    SP -.-> SA
-    SP -.-> SB
-    SR -.-> SP
+    %% Inter-service
+    SP -.REST Call.-> SA
+    SP -.REST Call.-> SB
+    SR -.REST Call.-> SP
 
-    %% Database Flow
-    SA --> WriteDB
-    SA --> ReadDB
+    %% Database Operations
+    SA ---|Write| WriteDB
+    SA ---|Read| ReadDB
+    SB ---|Write| WriteDB
+    SB ---|Read| ReadDB
+    SP ---|Write| WriteDB
+    SP ---|Read| ReadDB
+    SR ---|Write| WriteDB
+    SR ---|Read| ReadDB
 
-    %% Messaging (Publish)
-    %% Menggunakan linkStyle nanti untuk memastikan garis hitam
-    SA -->|Pub| RMQ
-    SB -->|Pub| RMQ
-    SP -->|Pub| RMQ
-    SR -->|Pub| RMQ
+    %% Event Publishing
+    SA ==>|Publish Event| RMQ
+    SB ==>|Publish Event| RMQ
+    SP ==>|Publish Event| RMQ
+    SR ==>|Publish Event| RMQ
 
-    %% Messaging (Subscribe)
-    RMQ -->|Sub| SA
-    RMQ -->|Sub| SB
-    RMQ -->|Sub| SP
-    RMQ -->|Sub| SR
+    %% Event Subscribing
+    RMQ -.->|Subscribe| SA
+    RMQ -.->|Subscribe| SB
+    RMQ -.->|Subscribe| SP
+    RMQ -.->|Subscribe| SR
     
-    %% Sync & Mgmt
-    RMQ -.Sync.-> ReadDB
-    RMQ --- RMQMgmt
+    %% Event Sync
+    RMQ ==>|Event Sync| ReadDB
+    RMQ ---|Admin| RMQMgmt
 
-    %% Logging (Dashed - Tipis)
-    Gateway -.-> ELK
-    SA -.-> ELK
-    SB -.-> ELK
-    SP -.-> ELK
-    SR -.-> ELK
+    %% Logging
+    Gateway -.Logs.-> ELK
+    SA -.Logs.-> ELK
+    SB -.Logs.-> ELK
+    SP -.Logs.-> ELK
+    SR -.Logs.-> ELK
 
-    %% --- FINAL STYLING ---
-    %% Memastikan Subgraph punya border jelas tapi background putih/terang
-    style Services fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
-    style Data fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
-    style Bus fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
-    style Obs fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
+    %% --- STYLING FIX ---
+    style Services fill:#eff6ff,stroke:#bfdbfe,stroke-width:2px,rx:10,color:#1e3a8a
+    style Data fill:#f1f5f9,stroke:#cbd5e1,stroke-width:2px,rx:10,color:#334155
+    style Bus fill:#fff7ed,stroke:#fed7aa,stroke-width:2px,rx:10,color:#9a3412
+    style Obs fill:#f5f3ff,stroke:#ddd6fe,stroke-width:2px,rx:10,color:#5b21b6
     
-    %% Memaksa semua garis menjadi Hitam Pekat (#000000)
-    linkStyle default stroke:#000000,stroke-width:2px;
+    %% Perbaikan pada baris ini (menghapus definisi color yang error)
+    linkStyle default stroke:#334155,stroke-width:1px
 ```
 
 ### 📦 Komponen Utama
