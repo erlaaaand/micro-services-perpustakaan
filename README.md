@@ -220,14 +220,8 @@ graph TB
 git clone <repository-url>
 cd perpustakaan-microservices
 
-# Build semua services
-./build-all.sh
-
 # Start semua services dengan Docker Compose
 docker-compose up -d
-
-# Verifikasi health status
-./deploy.sh health
 ```
 
 ### 📊 Verification
