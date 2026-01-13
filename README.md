@@ -53,55 +53,122 @@
 ## 🏛️ Arsitektur Sistem
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#FFFFFF',
+    'mainBkg': '#FFFFFF',
+    'primaryColor': '#FFFFFF',
+    'primaryTextColor': '#000000',
+    'lineColor': '#000000',
+    'tertiaryColor': '#FFFFFF',
+    'clusterBkg': '#FAFAFA'
+  },
+  'flowchart': {
+    'curve': 'step',
+    'nodeSpacing': 100,
+    'rankSpacing': 80
+  }
+}}%%
+
 graph TB
-    Client[Client Application]
+    %% --- STYLE DEFINITIONS ---
+    %% Warna Solid & Kontras Tinggi
+    classDef client fill:#333,stroke:#000,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
+    classDef gateway fill:#16a34a,stroke:#000,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
+    classDef service fill:#2563eb,stroke:#000,stroke-width:2px,color:#fff,rx:5;
+    classDef db fill:#475569,stroke:#000,stroke-width:2px,color:#fff,rx:5;
+    classDef msg fill:#ea580c,stroke:#000,stroke-width:2px,color:#fff,rx:5;
+    classDef monitor fill:#7c3aed,stroke:#000,stroke-width:2px,color:#fff,rx:5;
+    classDef infra fill:#06b6d4,stroke:#000,stroke-width:2px,color:#fff,rx:5;
+
+    %% --- NODES ---
     
-    Client --> Gateway[API Gateway :8080]
+    Client[Client App]:::client
+    Gateway[API Gateway :8080]:::gateway
+    Eureka[Eureka Server :8761]:::infra
+
+    %% GROUP: MICROSERVICES
+    subgraph Services [Microservices]
+        direction TB
+        SA[Service Anggota :8081]:::service
+        SB[Service Buku :8082]:::service
+        SP[Service Peminjaman :8083]:::service
+        SR[Service Pengembalian :8084]:::service
+    end
+
+    %% GROUP: DATABASE
+    subgraph Data [Persistence]
+        direction TB
+        WriteDB[(H2 Write Model)]:::db
+        ReadDB[(MongoDB Read Model)]:::db
+    end
+
+    %% GROUP: MESSAGING
+    subgraph Bus [Event Bus]
+        RMQ[RabbitMQ :5672]:::msg
+        RMQMgmt[Mgmt UI :15672]:::msg
+    end
+
+    %% GROUP: OBSERVABILITY
+    subgraph Obs [Observability]
+        ELK[ELK Stack]:::monitor
+    end
+
+    %% --- RELATIONS ---
     
-    Gateway --> Eureka[Eureka Server :8761<br/>Service Discovery]
+    %% Main Flow
+    Client --> Gateway
+    Gateway --> Eureka
     
-    Gateway --> SA[Service Anggota :8081<br/>H2 + MongoDB]
-    Gateway --> SB[Service Buku :8082<br/>H2 + MongoDB]
-    Gateway --> SP[Service Peminjaman :8083<br/>H2 + MongoDB]
-    Gateway --> SR[Service Pengembalian :8084<br/>H2 + MongoDB]
+    %% Gateway to Services (Dipisah agar tidak numpuk)
+    Gateway --> SA
+    Gateway --> SB
+    Gateway --> SP
+    Gateway --> SR
+
+    %% Inter-service (Garis Putus-putus)
+    SP -.-> SA
+    SP -.-> SB
+    SR -.-> SP
+
+    %% Database Flow
+    SA --> WriteDB
+    SA --> ReadDB
+
+    %% Messaging (Publish)
+    %% Menggunakan linkStyle nanti untuk memastikan garis hitam
+    SA -->|Pub| RMQ
+    SB -->|Pub| RMQ
+    SP -->|Pub| RMQ
+    SR -->|Pub| RMQ
+
+    %% Messaging (Subscribe)
+    RMQ -->|Sub| SA
+    RMQ -->|Sub| SB
+    RMQ -->|Sub| SP
+    RMQ -->|Sub| SR
     
-    SP -.Inter-service.-> SA
-    SP -.Inter-service.-> SB
-    SR -.Inter-service.-> SP
-    
-    SA --> WriteDB[(H2 Database<br/>Write Model)]
-    SA --> ReadDB[(MongoDB<br/>Read Model)]
-    
-    SA -->|Publish Event| RMQ[RabbitMQ :5672<br/>Message Broker]
-    SB -->|Publish Event| RMQ
-    SP -->|Publish Event| RMQ
-    SR -->|Publish Event| RMQ
-    
-    RMQ -->|Subscribe Event| SA
-    RMQ -->|Subscribe Event| SB
-    RMQ -->|Subscribe Event| SP
-    RMQ -->|Subscribe Event| SR
-    
+    %% Sync & Mgmt
     RMQ -.Sync.-> ReadDB
+    RMQ --- RMQMgmt
+
+    %% Logging (Dashed - Tipis)
+    Gateway -.-> ELK
+    SA -.-> ELK
+    SB -.-> ELK
+    SP -.-> ELK
+    SR -.-> ELK
+
+    %% --- FINAL STYLING ---
+    %% Memastikan Subgraph punya border jelas tapi background putih/terang
+    style Services fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
+    style Data fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
+    style Bus fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
+    style Obs fill:#FFFFFF,stroke:#000,stroke-width:1px,stroke-dasharray: 5 5
     
-    Gateway --> ELK[ELK Stack<br/>Elasticsearch + Logstash + Kibana]
-    SA --> ELK
-    SB --> ELK
-    SP --> ELK
-    SR --> ELK
-    
-    RMQMgmt[RabbitMQ Management :15672]
-    RMQ --> RMQMgmt
-    
-    style Gateway fill:#4CAF50
-    style Eureka fill:#2196F3
-    style SA fill:#FF9800
-    style SB fill:#FF9800
-    style SP fill:#FF9800
-    style SR fill:#FF9800
-    style RMQ fill:#FF6600
-    style RMQMgmt fill:#FF6600
-    style ELK fill:#9C27B0
+    %% Memaksa semua garis menjadi Hitam Pekat (#000000)
+    linkStyle default stroke:#000000,stroke-width:2px;
 ```
 
 ### 📦 Komponen Utama
@@ -732,9 +799,6 @@ perpustakaan-microservices/
 │   │   ├── command/              # JPA Repository
 │   │   └── query/                # MongoDB Repository
 │   ├── 📁 event/                 # Event definitions
-│   ├── 📁 messaging/
-│   │   ├── publisher/            # RabbitMQ publishers
-│   │   └── consumer/             # RabbitMQ consumers
 │   └── 📁 config/
 │       └── RabbitMQConfig.java   # RabbitMQ configuration
 ├── 📁 service-buku/               # Book Catalog (CQRS)
@@ -745,9 +809,7 @@ perpustakaan-microservices/
 │   └── 📁 logstash/              # Logstash pipeline
 ├── 📄 docker-compose.yml         # Docker orchestration
 ├── 📄 Jenkinsfile                # CI/CD pipeline
-├── 📄 .env.example               # Environment template
-├── 📄 build-all.sh               # Build automation
-└── 📄 deploy.sh                  # Deployment script
+└── 📄 .env.example               # Environment template
 ```
 
 ---
