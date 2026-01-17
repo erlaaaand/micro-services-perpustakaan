@@ -53,55 +53,127 @@
 ## 🏛️ Arsitektur Sistem
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#FFFFFF',
+    'mainBkg': '#FFFFFF',
+    'primaryColor': '#FFFFFF',
+    'primaryTextColor': '#0f172a',
+    'lineColor': '#334155',
+    'tertiaryColor': '#FFFFFF',
+    'clusterBkg': '#f8fafc',
+    'edgeLabelBackground': '#ffffff'
+  },
+  'flowchart': {
+    'curve': 'basis',
+    'nodeSpacing': 120,
+    'rankSpacing': 100,
+    'padding': 20
+  }
+}}%%
+
 graph TB
-    Client[Client Application]
+    %% --- STYLE DEFINITIONS ---
+    classDef client fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
+    classDef gateway fill:#059669,stroke:#047857,stroke-width:2px,color:#fff,font-weight:bold,rx:5;
+    classDef service fill:#2563eb,stroke:#1d4ed8,stroke-width:2px,color:#fff,rx:5;
+    classDef db fill:#475569,stroke:#334155,stroke-width:2px,color:#fff,rx:5;
+    classDef msg fill:#ea580c,stroke:#c2410c,stroke-width:2px,color:#fff,rx:5;
+    classDef monitor fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#fff,rx:5;
+    classDef infra fill:#0891b2,stroke:#0e7490,stroke-width:2px,color:#fff,rx:5;
+
+    %% --- NODES ---
+    Client[Client App]:::client
+    Gateway[API Gateway<br/>:8080]:::gateway
+    Eureka[Eureka Server<br/>:8761]:::infra
+
+    %% GROUP: MICROSERVICES
+    subgraph Services ["🔷 Microservices Layer"]
+        direction LR
+        SA[Service<br/>Anggota<br/>:8081]:::service
+        SB[Service<br/>Buku<br/>:8082]:::service
+        SP[Service<br/>Peminjaman<br/>:8083]:::service
+        SR[Service<br/>Pengembalian<br/>:8084]:::service
+    end
+
+    %% GROUP: DATABASE
+    subgraph Data ["💾 Persistence Layer"]
+        direction LR
+        WriteDB[(H2<br/>Write Model)]:::db
+        ReadDB[(MongoDB<br/>Read Model)]:::db
+    end
+
+    %% GROUP: MESSAGING
+    subgraph Bus ["📨 Event Bus Layer"]
+        direction TB
+        RMQ[RabbitMQ<br/>:5672]:::msg
+        RMQMgmt[Management UI<br/>:15672]:::msg
+    end
+
+    %% GROUP: OBSERVABILITY
+    subgraph Obs ["📊 Observability"]
+        ELK[ELK Stack<br/>Logging]:::monitor
+    end
+
+    %% --- RELATIONS ---
     
-    Client --> Gateway[API Gateway :8080]
+    %% Main Flow
+    Client -->|HTTP| Gateway
+    Gateway -.Service Discovery.-> Eureka
     
-    Gateway --> Eureka[Eureka Server :8761<br/>Service Discovery]
+    %% Gateway to Services
+    Gateway ==>|Route| SA
+    Gateway ==>|Route| SB
+    Gateway ==>|Route| SP
+    Gateway ==>|Route| SR
+
+    %% Inter-service
+    SP -.REST Call.-> SA
+    SP -.REST Call.-> SB
+    SR -.REST Call.-> SP
+
+    %% Database Operations
+    SA ---|Write| WriteDB
+    SA ---|Read| ReadDB
+    SB ---|Write| WriteDB
+    SB ---|Read| ReadDB
+    SP ---|Write| WriteDB
+    SP ---|Read| ReadDB
+    SR ---|Write| WriteDB
+    SR ---|Read| ReadDB
+
+    %% Event Publishing
+    SA ==>|Publish Event| RMQ
+    SB ==>|Publish Event| RMQ
+    SP ==>|Publish Event| RMQ
+    SR ==>|Publish Event| RMQ
+
+    %% Event Subscribing
+    RMQ -.->|Subscribe| SA
+    RMQ -.->|Subscribe| SB
+    RMQ -.->|Subscribe| SP
+    RMQ -.->|Subscribe| SR
     
-    Gateway --> SA[Service Anggota :8081<br/>H2 + MongoDB]
-    Gateway --> SB[Service Buku :8082<br/>H2 + MongoDB]
-    Gateway --> SP[Service Peminjaman :8083<br/>H2 + MongoDB]
-    Gateway --> SR[Service Pengembalian :8084<br/>H2 + MongoDB]
+    %% Event Sync
+    RMQ ==>|Event Sync| ReadDB
+    RMQ ---|Admin| RMQMgmt
+
+    %% Logging
+    Gateway -.Logs.-> ELK
+    SA -.Logs.-> ELK
+    SB -.Logs.-> ELK
+    SP -.Logs.-> ELK
+    SR -.Logs.-> ELK
+
+    %% --- STYLING FIX ---
+    style Services fill:#eff6ff,stroke:#bfdbfe,stroke-width:2px,rx:10,color:#1e3a8a
+    style Data fill:#f1f5f9,stroke:#cbd5e1,stroke-width:2px,rx:10,color:#334155
+    style Bus fill:#fff7ed,stroke:#fed7aa,stroke-width:2px,rx:10,color:#9a3412
+    style Obs fill:#f5f3ff,stroke:#ddd6fe,stroke-width:2px,rx:10,color:#5b21b6
     
-    SP -.Inter-service.-> SA
-    SP -.Inter-service.-> SB
-    SR -.Inter-service.-> SP
-    
-    SA --> WriteDB[(H2 Database<br/>Write Model)]
-    SA --> ReadDB[(MongoDB<br/>Read Model)]
-    
-    SA -->|Publish Event| RMQ[RabbitMQ :5672<br/>Message Broker]
-    SB -->|Publish Event| RMQ
-    SP -->|Publish Event| RMQ
-    SR -->|Publish Event| RMQ
-    
-    RMQ -->|Subscribe Event| SA
-    RMQ -->|Subscribe Event| SB
-    RMQ -->|Subscribe Event| SP
-    RMQ -->|Subscribe Event| SR
-    
-    RMQ -.Sync.-> ReadDB
-    
-    Gateway --> ELK[ELK Stack<br/>Elasticsearch + Logstash + Kibana]
-    SA --> ELK
-    SB --> ELK
-    SP --> ELK
-    SR --> ELK
-    
-    RMQMgmt[RabbitMQ Management :15672]
-    RMQ --> RMQMgmt
-    
-    style Gateway fill:#4CAF50
-    style Eureka fill:#2196F3
-    style SA fill:#FF9800
-    style SB fill:#FF9800
-    style SP fill:#FF9800
-    style SR fill:#FF9800
-    style RMQ fill:#FF6600
-    style RMQMgmt fill:#FF6600
-    style ELK fill:#9C27B0
+    %% Perbaikan pada baris ini (menghapus definisi color yang error)
+    linkStyle default stroke:#334155,stroke-width:1px
 ```
 
 ### 📦 Komponen Utama
@@ -148,14 +220,8 @@ graph TB
 git clone <repository-url>
 cd perpustakaan-microservices
 
-# Build semua services
-./build-all.sh
-
 # Start semua services dengan Docker Compose
 docker-compose up -d
-
-# Verifikasi health status
-./deploy.sh health
 ```
 
 ### 📊 Verification
@@ -732,9 +798,6 @@ perpustakaan-microservices/
 │   │   ├── command/              # JPA Repository
 │   │   └── query/                # MongoDB Repository
 │   ├── 📁 event/                 # Event definitions
-│   ├── 📁 messaging/
-│   │   ├── publisher/            # RabbitMQ publishers
-│   │   └── consumer/             # RabbitMQ consumers
 │   └── 📁 config/
 │       └── RabbitMQConfig.java   # RabbitMQ configuration
 ├── 📁 service-buku/               # Book Catalog (CQRS)
@@ -745,9 +808,7 @@ perpustakaan-microservices/
 │   └── 📁 logstash/              # Logstash pipeline
 ├── 📄 docker-compose.yml         # Docker orchestration
 ├── 📄 Jenkinsfile                # CI/CD pipeline
-├── 📄 .env.example               # Environment template
-├── 📄 build-all.sh               # Build automation
-└── 📄 deploy.sh                  # Deployment script
+└── 📄 .env.example               # Environment template
 ```
 
 ---
