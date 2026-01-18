@@ -9,7 +9,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-**Sistem manajemen perpustakaan enterprise-grade dengan arsitektur microservices, implementasi CQRS pattern, Event-Driven Architecture menggunakan RabbitMQ, CI/CD pipeline, dan monitoring terdistribusi**
+**Sistem manajemen perpustakaan enterprise-grade dengan arsitektur microservices, implementasi CQRS pattern, Event-Driven Architecture menggunakan RabbitMQ, CI/CD pipeline, monitoring & tracing terdistribusi**
 
 [Fitur](#-fitur-utama) • [Arsitektur](#-arsitektur-sistem) • [Quick Start](#-quick-start) • [Dokumentasi](#-dokumentasi-api) • [Monitoring](#-monitoring--observability)
 
@@ -39,6 +39,8 @@
 - ✅ **CI/CD Pipeline** - Jenkins automation
 - ✅ **Containerization** - Docker & Docker Compose
 - ✅ **Distributed Logging** - ELK Stack (Elasticsearch, Logstash, Kibana)
+- ✅ **Metrics Monitoring** - Prometheus + Grafana
+- ✅ **Distributed Tracing** - Zipkin
 - ✅ **Message Queue Monitoring** - RabbitMQ Management UI
 - ✅ **Health Monitoring** - Spring Boot Actuator
 - ✅ **API Documentation** - OpenAPI/Swagger aggregation
@@ -112,8 +114,12 @@ graph TB
     end
 
     %% GROUP: OBSERVABILITY
-    subgraph Obs ["📊 Observability"]
+    subgraph Obs ["📊 Observability Stack"]
+        direction TB
         ELK[ELK Stack<br/>Logging]:::monitor
+        Prom[Prometheus<br/>:9090]:::monitor
+        Graf[Grafana<br/>:3000]:::monitor
+        Zip[Zipkin<br/>:9411]:::monitor
     end
 
     %% --- RELATIONS ---
@@ -159,12 +165,26 @@ graph TB
     RMQ ==>|Event Sync| ReadDB
     RMQ ---|Admin| RMQMgmt
 
-    %% Logging
+    %% Monitoring & Observability
     Gateway -.Logs.-> ELK
     SA -.Logs.-> ELK
     SB -.Logs.-> ELK
     SP -.Logs.-> ELK
     SR -.Logs.-> ELK
+    
+    Gateway -.Metrics.-> Prom
+    SA -.Metrics.-> Prom
+    SB -.Metrics.-> Prom
+    SP -.Metrics.-> Prom
+    SR -.Metrics.-> Prom
+    
+    Prom -->|Data Source| Graf
+    
+    Gateway -.Traces.-> Zip
+    SA -.Traces.-> Zip
+    SB -.Traces.-> Zip
+    SP -.Traces.-> Zip
+    SR -.Traces.-> Zip
 
     %% --- STYLING FIX ---
     style Services fill:#eff6ff,stroke:#bfdbfe,stroke-width:2px,rx:10,color:#1e3a8a
@@ -172,7 +192,6 @@ graph TB
     style Bus fill:#fff7ed,stroke:#fed7aa,stroke-width:2px,rx:10,color:#9a3412
     style Obs fill:#f5f3ff,stroke:#ddd6fe,stroke-width:2px,rx:10,color:#5b21b6
     
-    %% Perbaikan pada baris ini (menghapus definisi color yang error)
     linkStyle default stroke:#334155,stroke-width:1px
 ```
 
@@ -192,6 +211,9 @@ graph TB
 | **Elasticsearch** | 9200 | Elastic 8.11 | Log storage & indexing |
 | **Logstash** | 5000 | Logstash 8.11 | Log processing pipeline |
 | **Kibana** | 5601 | Kibana 8.11 | Log visualization dashboard |
+| **Prometheus** | 9090 | Prometheus Latest | Metrics collection & storage |
+| **Grafana** | 3000 | Grafana Latest | Metrics visualization & dashboards |
+| **Zipkin** | 9411 | Zipkin Latest | Distributed tracing system |
 | **Jenkins** | 9000 | Jenkins LTS | CI/CD Automation |
 
 ---
@@ -228,9 +250,15 @@ docker-compose up -d
 
 Setelah startup (tunggu ~2-3 menit), akses:
 
+**Core Services:**
 - **Eureka Dashboard**: http://localhost:8761
 - **API Gateway**: http://localhost:8080
 - **Swagger UI Gateway**: http://localhost:8080/swagger-ui.html
+
+**Monitoring & Observability:**
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (username: `admin`, password: `admin`)
+- **Zipkin Tracing**: http://localhost:9411
 - **RabbitMQ Management**: http://localhost:15672 (username: `guest`, password: `guest`)
 - **Kibana Logs**: http://localhost:5601
 
@@ -297,36 +325,24 @@ Command Service                RabbitMQ                Read Service
 Setiap service memiliki konfigurasi exchange dan queue sendiri:
 
 **Service Anggota**
-- Exchange: `anggota.exchange` (Topic)
-- Queue: `anggota.queue`
-- Routing Keys: 
-  - `anggota.created`
-  - `anggota.updated`
-  - `anggota.deleted`
+- Exchange: `anggota-exchange` (Topic)
+- Queue: `anggota-sync-queue`
+- Routing Key: `anggota.routing.key`
 
 **Service Buku**
-- Exchange: `buku.exchange` (Topic)
-- Queue: `buku.queue`
-- Routing Keys:
-  - `buku.created`
-  - `buku.updated`
-  - `buku.deleted`
+- Exchange: `buku-exchange` (Topic)
+- Queue: `buku-sync-queue`
+- Routing Key: `buku.routing.key`
 
 **Service Peminjaman**
-- Exchange: `peminjaman.exchange` (Topic)
-- Queue: `peminjaman.queue`
-- Routing Keys:
-  - `peminjaman.created`
-  - `peminjaman.updated`
-  - `peminjaman.deleted`
+- Exchange: `peminjaman-exchange` (Topic)
+- Queue: `peminjaman-sync-queue`
+- Routing Key: `peminjaman.routing.key`
 
 **Service Pengembalian**
-- Exchange: `pengembalian.exchange` (Topic)
-- Queue: `pengembalian.queue`
-- Routing Keys:
-  - `pengembalian.created`
-  - `pengembalian.updated`
-  - `pengembalian.deleted`
+- Exchange: `pengembalian-exchange` (Topic)
+- Queue: `pengembalian-sync-queue`
+- Routing Key: `pengembalian.routing.key`
 
 ### Event Structure
 
@@ -465,8 +481,8 @@ POST /api/peminjaman
 Content-Type: application/json
 
 {
-  "anggotaId": 1,
-  "bukuId": 1,
+  "anggotaId": "uuid-anggota",
+  "bukuId": "uuid-buku",
   "tanggalPinjam": "2024-01-01",
   "tanggalKembali": "2024-01-15",
   "status": "DIPINJAM"
@@ -487,6 +503,7 @@ GET /api/peminjaman/{id}
 }
 
 # Data source: MongoDB (Read Model)
+# Additional data fetched via RestTemplate from other services
 ```
 
 ---
@@ -501,7 +518,7 @@ POST /api/pengembalian
 Content-Type: application/json
 
 {
-  "peminjamanId": 1,
+  "peminjamanId": "uuid-peminjaman",
   "tanggalDikembalikan": "2024-01-20",
   "terlambat": 5,
   "denda": 25000.0
@@ -513,6 +530,77 @@ Content-Type: application/json
 ---
 
 ## 🔍 Monitoring & Observability
+
+### 📊 Prometheus Metrics
+
+**Prometheus UI**: http://localhost:9090
+
+#### Available Metrics
+- **JVM Metrics**: `jvm_memory_used_bytes`, `jvm_threads_live_threads`, `jvm_gc_pause_seconds`
+- **HTTP Metrics**: `http_server_requests_seconds_count`, `http_server_requests_seconds_sum`
+- **System Metrics**: `system_cpu_usage`, `system_load_average_1m`, `process_uptime_seconds`
+- **Custom Metrics**: Application-specific business metrics
+
+#### Query Examples
+```promql
+# Request rate per service
+rate(http_server_requests_seconds_count{application="service-anggota"}[5m])
+
+# Memory usage percentage
+jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100
+
+# Error rate
+rate(http_server_requests_seconds_count{status=~"5.."}[5m])
+```
+
+### 📈 Grafana Dashboards
+
+**Grafana UI**: http://localhost:3000
+- Username: `admin`
+- Password: `admin`
+
+#### Pre-configured Dashboards
+1. **JVM Micrometer Dashboard**
+   - Heap & Non-Heap memory usage
+   - GC pause times & collections
+   - Thread states
+   - CPU usage & system load
+   - HTTP request rates & errors
+
+#### Creating Custom Dashboards
+1. Login to Grafana
+2. Click **+** → **Dashboard**
+3. Add panels with Prometheus queries
+4. Configure visualizations (Graph, Gauge, Table, etc.)
+5. Save dashboard
+
+### 🔍 Zipkin Distributed Tracing
+
+**Zipkin UI**: http://localhost:9411
+
+#### Features
+- **Trace Visualization**: View complete request flow across services
+- **Dependency Graph**: Visualize service dependencies
+- **Performance Analysis**: Identify slow operations and bottlenecks
+- **Error Tracking**: Find failed requests and error patterns
+
+#### Trace Example
+```
+GET /api/peminjaman/123
+├─ [api-gateway] 2ms
+├─ [service-peminjaman] 15ms
+│  ├─ [MongoDB Read] 3ms
+│  ├─ [service-anggota] 5ms
+│  └─ [service-buku] 4ms
+└─ Total: 17ms
+```
+
+#### Search Traces
+1. Open Zipkin UI
+2. Select service name
+3. Set time range
+4. Add optional filters (minDuration, tags)
+5. Click **RUN QUERY**
 
 ### 🐰 RabbitMQ Monitoring
 
@@ -529,12 +617,12 @@ Content-Type: application/json
 
 #### View Exchange Bindings
 1. Klik **Exchanges** tab
-2. Pilih exchange (contoh: `anggota.exchange`)
+2. Pilih exchange (contoh: `anggota-exchange`)
 3. View bindings ke queues
 4. Monitor message routing
 
 #### Inspect Messages
-1. Klik queue name (contoh: `anggota.queue`)
+1. Klik queue name (contoh: `anggota-sync-queue`)
 2. Scroll ke **Get messages** section
 3. Klik **Get Message(s)** untuk preview message content
 
@@ -545,7 +633,7 @@ Content-Type: application/json
 #### Setup Index Pattern
 1. Buka Kibana → Management → Stack Management
 2. Pilih **Index Patterns** → **Create index pattern**
-3. Masukkan pattern: `logs-*`
+3. Masukkan pattern: `app-logs-*`
 4. Pilih timestamp field: `@timestamp`
 5. Klik **Create index pattern**
 
@@ -558,18 +646,22 @@ Content-Type: application/json
    ```
 3. Gunakan KQL query untuk searching
 
-#### Search RabbitMQ Events
+#### Search Examples
 ```
+# RabbitMQ Events
 message: "Publishing event to RabbitMQ"
 message: "Received event from RabbitMQ"
+
+# API Requests
+message: "API REQUEST"
+
+# Errors
+level: "ERROR"
 ```
 
 ### 🩺 Health Checks
 
 ```bash
-# Check all services
-./deploy.sh health
-
 # Individual service health
 curl http://localhost:8761/actuator/health  # Eureka
 curl http://localhost:8080/actuator/health  # Gateway
@@ -577,6 +669,9 @@ curl http://localhost:8081/actuator/health  # Service Anggota
 curl http://localhost:8082/actuator/health  # Service Buku
 curl http://localhost:8083/actuator/health  # Service Peminjaman
 curl http://localhost:8084/actuator/health  # Service Pengembalian
+
+# Prometheus metrics endpoint
+curl http://localhost:8081/actuator/prometheus
 
 # Check RabbitMQ health
 curl http://localhost:15672/api/health/checks/alarms  # Requires auth
@@ -614,14 +709,27 @@ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 
 ```
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  Initialize  │──▶│   Checkout   │──▶│ Build & Test │
+│  Initialize  │──▶│   Checkout   │──▶│ Build JARs   │
 └──────────────┘   └──────────────┘   └──────────────┘
                                               │
                                               ▼
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ Health Check │◀──│    Deploy    │◀──│  Push Docker │
+│ Health Check │◀──│    Deploy    │◀──│ Build Docker │
 └──────────────┘   └──────────────┘   └──────────────┘
+                                              │
+                                              ▼
+                                      ┌──────────────┐
+                                      │ Push to Hub  │
+                                      └──────────────┘
 ```
+
+### Pipeline Features
+- ✅ Sequential JAR building (skip tests untuk speed)
+- ✅ Docker multi-stage builds
+- ✅ Automatic versioning dengan Git commit hash
+- ✅ Environment-specific deployments (dev/staging/production)
+- ✅ Health check verification
+- ✅ Automatic rollback pada failure
 
 ---
 
@@ -638,7 +746,7 @@ mvn clean package -DskipTests
 
 ```bash
 # Start infrastructure services first
-docker-compose up -d mongodb rabbitmq
+docker-compose up -d mongodb rabbitmq prometheus grafana zipkin
 
 # Start Eureka
 cd eureka-server
@@ -668,6 +776,9 @@ MONGODB_URI_ANGGOTA=mongodb://localhost:27017/anggota_db
 MONGODB_URI_BUKU=mongodb://localhost:27017/buku_db
 MONGODB_URI_PEMINJAMAN=mongodb://localhost:27017/peminjaman_db
 MONGODB_URI_PENGEMBALIAN=mongodb://localhost:27017/pengembalian_db
+
+# Monitoring
+ZIPKIN_ENDPOINT=http://localhost:9411/api/v2/spans
 
 # ELK Stack
 ELASTICSEARCH_HOSTS=http://localhost:9200
@@ -744,6 +855,55 @@ rabbitmqctl list_exchanges
    ```
 5. Verify exchange-queue binding di RabbitMQ UI
 
+### Prometheus Not Collecting Metrics
+
+```bash
+# Check Prometheus targets
+curl http://localhost:9090/api/v1/targets
+
+# Check if actuator endpoint is accessible
+curl http://localhost:8081/actuator/prometheus
+
+# Verify prometheus.yml configuration
+docker exec prometheus cat /etc/prometheus/prometheus.yml
+
+# Restart Prometheus
+docker-compose restart prometheus
+```
+
+### Zipkin Traces Not Appearing
+
+```bash
+# Check if services are sending traces
+curl http://localhost:8081/actuator/health
+
+# Verify Zipkin endpoint configuration
+# In application.properties:
+management.zipkin.tracing.endpoint=http://zipkin:9411/api/v2/spans
+
+# Check Zipkin logs
+docker logs zipkin
+
+# Restart Zipkin
+docker-compose restart zipkin
+```
+
+### Grafana Dashboard Issues
+
+```bash
+# Reset Grafana admin password
+docker exec -it grafana grafana-cli admin reset-admin-password admin
+
+# Check Grafana logs
+docker logs grafana
+
+# Verify Prometheus datasource
+curl http://localhost:3000/api/datasources
+
+# Restart Grafana
+docker-compose restart grafana
+```
+
 ### Port Already in Use
 
 ```bash
@@ -769,6 +929,13 @@ docker logs mongodb
 
 # Connect to MongoDB shell
 docker exec -it mongodb mongosh
+
+# List databases
+show dbs
+
+# Check specific database
+use anggota_read_db
+show collections
 ```
 
 ### Eureka Registration Issues
@@ -777,6 +944,22 @@ docker exec -it mongodb mongosh
 2. Check Eureka dashboard: http://localhost:8761
 3. Verify `eureka.client.register-with-eureka=true` di application.properties
 4. Check network connectivity: `docker network inspect perpustakaan-network`
+
+### ELK Stack Issues
+
+```bash
+# Check Elasticsearch health
+curl http://localhost:9200/_cluster/health
+
+# Check Logstash pipeline
+docker logs logstash
+
+# Verify Kibana connectivity
+curl http://localhost:5601/api/status
+
+# Restart ELK Stack
+docker-compose restart elasticsearch logstash kibana
+```
 
 ---
 
@@ -798,16 +981,31 @@ perpustakaan-microservices/
 │   │   ├── command/              # JPA Repository
 │   │   └── query/                # MongoDB Repository
 │   ├── 📁 event/                 # Event definitions
+│   ├── 📁 dto/                   # Data Transfer Objects
+│   ├── 📁 controller/            # REST Controllers
+│   ├── 📁 exception/             # Global Exception Handlers
 │   └── 📁 config/
-│       └── RabbitMQConfig.java   # RabbitMQ configuration
+│       ├── RabbitMQConfig.java   # RabbitMQ configuration
+│       └── SwaggerConfig.java    # OpenAPI configuration
 ├── 📁 service-buku/               # Book Catalog (CQRS)
 ├── 📁 service-peminjaman/         # Borrowing Service (CQRS)
+│   └── 📁 vo/                    # Value Objects for inter-service data
 ├── 📁 service-pengembalian/       # Return Service (CQRS)
 ├── 📁 monitoring/
-│   ├── 📁 kibana/                # Kibana config
-│   └── 📁 logstash/              # Logstash pipeline
+│   ├── 📁 prometheus/
+│   │   └── prometheus.yml        # Prometheus scrape config
+│   ├── 📁 grafana/
+│   │   └── provisioning/
+│   │       ├── datasources/      # Auto-provisioned datasources
+│   │       └── dashboards/       # Pre-configured dashboards
+│   ├── 📁 kibana/
+│   │   └── kibana.yml            # Kibana configuration
+│   └── 📁 logstash/
+│       ├── config/               # Logstash config
+│       └── pipeline/             # Log processing pipeline
 ├── 📄 docker-compose.yml         # Docker orchestration
 ├── 📄 Jenkinsfile                # CI/CD pipeline
+├── 📄 Dockerfile-jenkins         # Custom Jenkins image
 └── 📄 .env.example               # Environment template
 ```
 
@@ -842,10 +1040,21 @@ open target/site/jacoco/index.html
 # Test event publishing
 curl -X POST http://localhost:8080/api/anggota \
   -H "Content-Type: application/json" \
-  -d '{"nomorAnggota":"A001","nama":"Test User",...}'
+  -d '{"nomorAnggota":"A001","nama":"Test User","alamat":"Test Address","email":"test@example.com"}'
 
 # Check RabbitMQ Management UI
 # Verify message appears in queue and gets consumed
+```
+
+### Testing Distributed Tracing
+
+```bash
+# Make API call
+curl http://localhost:8080/api/peminjaman/123
+
+# Open Zipkin UI (http://localhost:9411)
+# Search for trace by service name or trace ID
+# Verify complete request flow across services
 ```
 
 ### API Testing with Postman
@@ -853,6 +1062,67 @@ curl -X POST http://localhost:8080/api/anggota \
 1. Import collection: `postman/perpustakaan-api.json`
 2. Set environment variables
 3. Run test suite
+
+---
+
+## 📊 Performance Monitoring
+
+### Key Metrics to Monitor
+
+#### Application Metrics
+- **Request Rate**: `rate(http_server_requests_seconds_count[5m])`
+- **Error Rate**: `rate(http_server_requests_seconds_count{status=~"5.."}[5m])`
+- **Response Time**: `http_server_requests_seconds_sum / http_server_requests_seconds_count`
+
+#### JVM Metrics
+- **Heap Usage**: `jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}`
+- **GC Pause Time**: `jvm_gc_pause_seconds_sum`
+- **Thread Count**: `jvm_threads_live_threads`
+
+#### RabbitMQ Metrics
+- **Message Publish Rate**: Monitor via RabbitMQ Management UI
+- **Queue Depth**: Check "Ready" messages count
+- **Consumer Count**: Verify active consumers
+
+#### System Metrics
+- **CPU Usage**: `system_cpu_usage`
+- **Memory Usage**: `process_memory_rss_bytes`
+- **Disk I/O**: Monitor via system tools
+
+### Setting Up Alerts
+
+#### Prometheus Alert Rules
+Create `prometheus/alerts.yml`:
+
+```yaml
+groups:
+  - name: service_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Service {{ $labels.application }} has error rate > 5%"
+      
+      - alert: HighMemoryUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Service {{ $labels.application }} using > 90% heap"
+```
+
+#### Grafana Alerts
+1. Open dashboard panel
+2. Click **Alert** tab
+3. Configure alert conditions
+4. Set notification channels (Email, Slack, etc.)
 
 ---
 
@@ -864,7 +1134,7 @@ curl -X POST http://localhost:8080/api/anggota \
 - [ ] Enable Spring Security
 - [ ] Configure JWT authentication
 - [ ] Setup HTTPS/SSL certificates
-- [ ] Use secrets management (Vault)
+- [ ] Use secrets management (Vault, AWS Secrets Manager)
 - [ ] Enable Actuator security
 - [ ] Configure CORS properly
 - [ ] Setup rate limiting
@@ -872,6 +1142,10 @@ curl -X POST http://localhost:8080/api/anggota \
 - [ ] Secure RabbitMQ with strong credentials
 - [ ] Enable RabbitMQ SSL/TLS
 - [ ] Configure RabbitMQ virtual hosts per service
+- [ ] Secure Prometheus/Grafana with authentication
+- [ ] Use network policies for container isolation
+- [ ] Implement API Gateway authentication
+- [ ] Enable database encryption at rest
 
 ---
 
@@ -883,7 +1157,7 @@ Edit `JAVA_OPTS` di docker-compose.yml:
 
 ```yaml
 environment:
-  - JAVA_OPTS=-Xmx1g -Xms512m -XX:+UseG1GC
+  - JAVA_OPTS=-Xmx1g -Xms512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
 ```
 
 ### RabbitMQ Tuning
@@ -894,6 +1168,7 @@ rabbitmq:
   environment:
     - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=512MB
     - RABBITMQ_CHANNEL_MAX=2048
+    - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit disk_free_limit 2147483648
 ```
 
 ### MongoDB Indexing
@@ -902,7 +1177,7 @@ rabbitmq:
 // Connect to MongoDB
 docker exec -it mongodb mongosh
 
-// Create indexes
+// Create indexes for better query performance
 use anggota_read_db
 db.anggota_read.createIndex({ "nomorAnggota": 1 })
 db.anggota_read.createIndex({ "email": 1 })
@@ -910,20 +1185,65 @@ db.anggota_read.createIndex({ "email": 1 })
 use buku_read_db
 db.buku_read.createIndex({ "kodeBuku": 1 })
 db.buku_read.createIndex({ "judul": "text" })
+
+use peminjaman_read_db
+db.peminjaman_read.createIndex({ "anggotaId": 1, "status": 1 })
+db.peminjaman_read.createIndex({ "bukuId": 1 })
+
+use pengembalian_read_db
+db.pengembalian_read.createIndex({ "peminjamanId": 1 })
 ```
 
 ### Message Processing Optimization
 
-Adjust prefetch count di application.yml:
+Adjust prefetch count di application.properties:
 
-```yaml
-spring:
-  rabbitmq:
-    listener:
-      simple:
-        prefetch: 10  # Process 10 messages concurrently
-        concurrency: 3  # 3 concurrent consumers
+```properties
+spring.rabbitmq.listener.simple.prefetch=10
+spring.rabbitmq.listener.simple.concurrency=3
+spring.rabbitmq.listener.simple.max-concurrency=10
 ```
+
+### Database Connection Pooling
+
+```properties
+# HikariCP settings
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=10
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.idle-timeout=600000
+spring.datasource.hikari.max-lifetime=1800000
+```
+
+---
+
+## 🚀 Scaling Strategies
+
+### Horizontal Scaling
+
+```bash
+# Scale specific service
+docker-compose up -d --scale service-anggota=3
+
+# Scale multiple services
+docker-compose up -d \
+  --scale service-anggota=3 \
+  --scale service-buku=3 \
+  --scale service-peminjaman=2
+```
+
+### Load Balancing
+- Client-side load balancing via Eureka
+- Gateway automatically distributes requests
+- Monitor load distribution in Grafana
+
+### Database Scaling
+- **MongoDB**: Setup replica set for read scaling
+- **H2 (Production)**: Replace with PostgreSQL/MySQL with replication
+
+### Message Queue Scaling
+- **RabbitMQ Cluster**: Setup cluster for high availability
+- **Message Partitioning**: Use consistent hashing for message distribution
 
 ---
 
@@ -937,6 +1257,12 @@ Contributions are welcome! Please follow these steps:
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Open Pull Request
 
+### Coding Standards
+- Follow Java Code Conventions
+- Write unit tests for new features
+- Update documentation
+- Use meaningful commit messages
+
 ---
 
 ## 📝 License
@@ -947,13 +1273,29 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 
 ## 🎓 Learning Resources
 
+### Architecture & Patterns
 - [Spring Cloud Documentation](https://spring.io/projects/spring-cloud)
 - [CQRS Pattern](https://martinfowler.com/bliki/CQRS.html)
-- [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)
 - [Event-Driven Architecture](https://martinfowler.com/articles/201701-event-driven.html)
 - [Microservices Architecture](https://microservices.io/)
+
+### Messaging & Events
+- [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)
+- [RabbitMQ Best Practices](https://www.cloudamqp.com/blog/part1-rabbitmq-best-practice.html)
+
+### Monitoring & Observability
+- [Prometheus Documentation](https://prometheus.io/docs/introduction/overview/)
+- [Grafana Tutorials](https://grafana.com/tutorials/)
+- [Zipkin Documentation](https://zipkin.io/pages/quickstart.html)
+- [ELK Stack Guide](https://www.elastic.co/guide/index.html)
+
+### Containerization
 - [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Reference](https://docs.docker.com/compose/)
+
+### Database
 - [MongoDB Best Practices](https://docs.mongodb.com/manual/)
+- [H2 Database Documentation](https://www.h2database.com/html/main.html)
 
 ---
 
@@ -966,10 +1308,65 @@ Untuk pertanyaan atau bantuan:
 
 ---
 
+## 🔄 Changelog
+
+### Version 2.0.0 (Latest)
+- ✨ Added Prometheus metrics collection
+- ✨ Added Grafana dashboards with JVM monitoring
+- ✨ Implemented Zipkin distributed tracing
+- ✨ Enhanced logging with correlation IDs
+- 🐛 Fixed RabbitMQ event listener issues
+- 📝 Updated documentation with monitoring guides
+
+### Version 1.0.0
+- 🎉 Initial release
+- ✅ CQRS pattern implementation
+- ✅ RabbitMQ event-driven architecture
+- ✅ ELK Stack logging
+- ✅ Jenkins CI/CD pipeline
+- ✅ Docker containerization
+
+---
+
+## 🗺️ Roadmap
+
+### Q1 2026
+- [ ] Implement API Gateway authentication (OAuth2/JWT)
+- [ ] Add Redis caching layer
+- [ ] Setup Kubernetes deployment
+- [ ] Implement saga pattern for distributed transactions
+
+### Q2 2026
+- [ ] Add Spring Cloud Config Server
+- [ ] Implement API versioning
+- [ ] Setup disaster recovery procedures
+- [ ] Add automated performance testing
+
+### Q3 2026
+- [ ] Migrate to reactive programming (WebFlux)
+- [ ] Implement GraphQL API
+- [ ] Add machine learning for book recommendations
+- [ ] Setup multi-region deployment
+
+---
+
+## 🙏 Acknowledgments
+
+- Spring Boot team for amazing framework
+- Netflix OSS for Eureka
+- RabbitMQ team for reliable messaging
+- Elastic for ELK Stack
+- Prometheus & Grafana communities
+- Docker & containerization ecosystem
+
+---
+
 <div align="center">
 
 **[⬆ Back to Top](#-sistem-microservices-perpustakaan)**
 
-Built using Java, Spring Boot, RabbitMQ, and passion for clean architecture
+Built with using Java, Spring Boot, RabbitMQ, and modern DevOps practices
+
+**⭐ Star this repository if you find it helpful!**
 
 </div>
