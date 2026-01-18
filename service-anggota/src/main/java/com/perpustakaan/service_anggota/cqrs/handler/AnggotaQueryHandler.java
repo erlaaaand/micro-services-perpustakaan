@@ -22,7 +22,9 @@ public class AnggotaQueryHandler {
     // Hapus @Transactional karena ini MongoDB (Atomic operations)
     public AnggotaReadModel handle(GetAnggotaByIdQuery query) {
         logger.debug("Handling GetAnggotaByIdQuery for ID: {}", query.getId());
-        return anggotaRepository.findById(query.getId()).orElse(null);
+        
+        return anggotaRepository.findById(query.getId())
+                .orElseThrow(() -> new RuntimeException("Anggota tidak ditemukan dengan ID: " + query.getId()));
     }
     
     public Page<AnggotaReadModel> handle(GetAllAnggotaQuery query) {

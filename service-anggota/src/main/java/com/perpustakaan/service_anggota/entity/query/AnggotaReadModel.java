@@ -6,14 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "anggota_read") // Ganti @Entity dengan @Document
+@Document(collection = "anggota_read")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class AnggotaReadModel {
 
-    @Id // Gunakan @Id dari jakarta.persistence atau org.springframework.data.annotation
-    private Long id; // Kita tetap pakai Long agar sinkron dengan MySQL/H2 Write
+    @Id
+    private String id;
 
     private String nomorAnggota;
     private String nama;

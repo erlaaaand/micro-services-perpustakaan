@@ -1,13 +1,11 @@
 package com.perpustakaan.service_anggota.cqrs.command;
 
+import java.util.UUID;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
 
-// DeleteAnggotaCommand.java
-@Data
+@Getter
 @AllArgsConstructor
-@NoArgsConstructor
 public class DeleteAnggotaCommand {
-    private Long id;
+    private final UUID id;
 }

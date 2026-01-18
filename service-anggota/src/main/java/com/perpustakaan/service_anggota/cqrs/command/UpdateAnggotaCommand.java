@@ -1,16 +1,15 @@
 package com.perpustakaan.service_anggota.cqrs.command;
 
+import java.util.UUID;
+import lombok.Getter;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
+@Getter
 @AllArgsConstructor
-@NoArgsConstructor
 public class UpdateAnggotaCommand {
-    private Long id;
-    private String nomorAnggota;
-    private String nama;
-    private String alamat;
-    private String email;
+    private final UUID id;
+    private final String nomorAnggota;
+    private final String nama;
+    private final String alamat;
+    private final String email;
 }
