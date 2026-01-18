@@ -2,6 +2,7 @@ package com.perpustakaan.service_buku.event;
 
 import com.perpustakaan.service_buku.entity.query.BukuReadModel;
 import com.perpustakaan.service_buku.repository.query.BukuQueryRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
@@ -21,8 +22,9 @@ public class BukuEventListener {
     @RabbitHandler
     public void handleCreatedEvent(BukuCreatedEvent event) {
         logger.info("RabbitMQ Receiver: Create Buku {}", event.getKodeBuku());
+        String idString = event.getId().toString();
         BukuReadModel model = new BukuReadModel();
-        model.setId(event.getId());
+        model.setId(idString);
         model.setKodeBuku(event.getKodeBuku());
         model.setJudul(event.getJudul());
         model.setPengarang(event.getPengarang());
@@ -35,12 +37,13 @@ public class BukuEventListener {
 
     @RabbitHandler
     public void handleUpdatedEvent(BukuUpdatedEvent event) {
+        String idString = event.getId().toString();
         logger.info("RabbitMQ Receiver: Update Buku {}", event.getId());
         
-        BukuReadModel model = queryRepository.findById(event.getId())
+        BukuReadModel model = queryRepository.findById(idString)
             .orElse(new BukuReadModel());
 
-        model.setId(event.getId());
+        model.setId(idString);
         model.setKodeBuku(event.getKodeBuku());
         model.setJudul(event.getJudul());
         model.setPengarang(event.getPengarang());
@@ -55,9 +58,10 @@ public class BukuEventListener {
 
     @RabbitHandler
     public void handleDeletedEvent(BukuDeletedEvent event) {
+        String idString = event.getId().toString();
         logger.info("RabbitMQ Receiver: Delete Buku {}", event.getId());
-        if (queryRepository.existsById(event.getId())) {
-            queryRepository.deleteById(event.getId());
+        if (queryRepository.existsById(idString)) {
+            queryRepository.deleteById(idString);
         } else {
             logger.warn("RabbitMQ Receiver: Buku ID {} not found for deletion", event.getId());
         }

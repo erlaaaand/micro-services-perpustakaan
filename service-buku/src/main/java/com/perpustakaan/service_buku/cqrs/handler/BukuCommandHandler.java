@@ -1,132 +1,156 @@
 package com.perpustakaan.service_buku.cqrs.handler;
 
 import com.perpustakaan.service_buku.cqrs.command.*;
-import com.perpustakaan.service_buku.entity.command.Buku;
-import com.perpustakaan.service_buku.event.BukuCreatedEvent;
-import com.perpustakaan.service_buku.event.BukuDeletedEvent;
-import com.perpustakaan.service_buku.event.BukuUpdatedEvent;
+import com.perpustakaan.service_buku.entity.command.BukuWriteModel;
+import com.perpustakaan.service_buku.event.*;
 import com.perpustakaan.service_buku.repository.command.BukuCommandRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
+@RequiredArgsConstructor
 public class BukuCommandHandler {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(BukuCommandHandler.class);
-    
-    @Autowired
-    private BukuCommandRepository bukuRepository;
-    
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
+
+    private final BukuCommandRepository bukuRepository;
+    private final RabbitTemplate rabbitTemplate;
 
     @Value("${perpustakaan.rabbitmq.exchange}")
     private String exchange;
 
     @Value("${perpustakaan.rabbitmq.routing-key}")
     private String routingKey;
-    
-    @Transactional
-    public Buku handle(CreateBukuCommand command) {
-        logger.info("Handle RabbitMQ Event: Handling CreateBukuCommand for kode: {}", command.getKodeBuku());
 
-        Buku existing = bukuRepository.findByKodeBuku(command.getKodeBuku());
-        if (existing != null) {
-            throw new IllegalArgumentException("Kode buku sudah digunakan: " + command.getKodeBuku());
-        }
-        
-        Buku buku = new Buku();
-        buku.setKodeBuku(command.getKodeBuku());
-        buku.setJudul(command.getJudul());
-        buku.setPengarang(command.getPengarang());
-        buku.setPenerbit(command.getPenerbit() != null ? command.getPenerbit() : "");
-        buku.setTahunTerbit(command.getTahunTerbit());
-        
-        Buku saved = bukuRepository.save(buku);
-        
-        // Publish Internal Event
-        publishBukuCreatedEvent(saved);
-        return saved;
-    }
-    
     @Transactional
-    public Buku handle(UpdateBukuCommand command) {
-        logger.info("Published RabbitMQ Event: Handling UpdateBukuCommand for ID: {}", command.getId());
-        
-        Optional<Buku> existing = bukuRepository.findById(command.getId());
-        if (existing.isEmpty()) {
-            throw new IllegalArgumentException("Buku tidak ditemukan dengan ID: " + command.getId());
-        }
-        
-        Buku buku = existing.get();
+    public BukuWriteModel handle(CreateBukuCommand command) {
+        logger.info("PROSES CREATE: Menambahkan buku baru. Kode: [{}], Judul: [{}]", 
+            command.getKodeBuku(), command.getJudul());
 
-        if (!buku.getKodeBuku().equals(command.getKodeBuku())) {
-            Buku conflict = bukuRepository.findByKodeBuku(command.getKodeBuku());
-            if (conflict != null && !conflict.getId().equals(command.getId())) {
-                throw new IllegalArgumentException("Kode buku sudah digunakan: " + command.getKodeBuku());
+        // 1. Validasi Duplikat Kode Buku
+        if (bukuRepository.existsByKodeBuku(command.getKodeBuku())) {
+            logger.warn("GAGAL CREATE: Kode Buku [{}] sudah ada di sistem.", command.getKodeBuku());
+            throw new IllegalArgumentException("Kode buku " + command.getKodeBuku() + " sudah digunakan.");
+        }
+
+        // 2. Validasi Duplikat Judul Buku
+        if (command.getJudul() != null && !command.getJudul().isBlank()) {
+            if (bukuRepository.existsByJudul(command.getJudul())) {
+                logger.warn("GAGAL CREATE: Judul [{}] sudah terdaftar.", command.getJudul());
+                throw new IllegalArgumentException("Judul " + command.getJudul() + " sudah terdaftar.");
             }
         }
 
+        BukuWriteModel buku = new BukuWriteModel();
         buku.setKodeBuku(command.getKodeBuku());
         buku.setJudul(command.getJudul());
         buku.setPengarang(command.getPengarang());
-        buku.setPenerbit(command.getPenerbit() != null ? command.getPenerbit() : buku.getPenerbit());
+        buku.setPenerbit(command.getPenerbit());
         buku.setTahunTerbit(command.getTahunTerbit());
-        
-        Buku updated = bukuRepository.save(buku);
-        
+
+        BukuWriteModel saved = bukuRepository.save(buku);
+        logger.info("SUKSES CREATE: Buku berhasil disimpan (Write DB). ID: [{}]", saved.getId());
+
+        publishBukuCreatedEvent(saved);
+        return saved;
+    }
+
+    @Transactional
+    public BukuWriteModel handle(UpdateBukuCommand command) {
+        logger.info("PROSES UPDATE: Memperbarui buku ID: [{}]", command.getId());
+
+        BukuWriteModel buku = bukuRepository.findById(command.getId())
+            .orElseThrow(() -> {
+                logger.error("GAGAL UPDATE: Buku ID [{}] tidak ditemukan.", command.getId());
+                return new IllegalArgumentException("Buku tidak ditemukan dengan ID: " + command.getId());
+            });
+
+        // Validasi Konflik Kode Buku (Cek milik orang lain)
+        Optional<BukuWriteModel> existingKode = bukuRepository.findByKodeBuku(command.getKodeBuku());
+        if (existingKode.isPresent() && !existingKode.get().getId().equals(command.getId())) {
+            logger.warn("GAGAL UPDATE: Konflik Kode Buku [{}].", command.getKodeBuku());
+            throw new IllegalArgumentException("Kode buku sudah digunakan oleh buku lain.");
+        }
+
+        buku.setKodeBuku(command.getKodeBuku());
+        buku.setJudul(command.getJudul());
+        buku.setPengarang(command.getPengarang());
+        buku.setPenerbit(command.getPenerbit());
+        buku.setTahunTerbit(command.getTahunTerbit());
+
+        BukuWriteModel updated = bukuRepository.save(buku);
+        logger.info("SUKSES UPDATE: Buku ID [{}] berhasil diperbarui.", updated.getId());
+
         publishBukuUpdatedEvent(updated);
         return updated;
     }
-    
+
     @Transactional
     public void handle(DeleteBukuCommand command) {
-        logger.info("Published RabbitMQ Event: Handling DeleteBukuCommand for ID: {}", command.getId());
-        
+        logger.info("PROSES DELETE: Menghapus buku ID: [{}]", command.getId());
+
         if (!bukuRepository.existsById(command.getId())) {
+            logger.warn("GAGAL DELETE: Buku ID [{}] tidak ditemukan.", command.getId());
             throw new IllegalArgumentException("Buku tidak ditemukan dengan ID: " + command.getId());
         }
 
         bukuRepository.deleteById(command.getId());
+        logger.info("SUKSES DELETE: Buku ID [{}] dihapus dari Write DB.", command.getId());
+
         publishBukuDeletedEvent(command.getId());
     }
-    
-    private void publishBukuCreatedEvent(Buku buku) {
-        BukuCreatedEvent event = new BukuCreatedEvent(
-            buku.getId(),
-            buku.getKodeBuku(),
-            buku.getJudul(),
-            buku.getPengarang(),
-            buku.getPenerbit(),
-            buku.getTahunTerbit()
-        );
-        rabbitTemplate.convertAndSend(exchange, routingKey, event);
-        logger.info("Published RabbitMQ Event: Internal BukuCreatedEvent for ID: {}", buku.getId());
+
+    // --- Private Loggers for Events ---
+
+    private void publishBukuCreatedEvent(BukuWriteModel buku) {
+        try {
+            BukuCreatedEvent event = new BukuCreatedEvent(
+                buku.getId(),
+                buku.getKodeBuku(),
+                buku.getJudul(),
+                buku.getPengarang(),
+                buku.getPenerbit(),
+                buku.getTahunTerbit()
+            );
+            rabbitTemplate.convertAndSend(exchange, routingKey, event);
+            logger.info("EVENT PUBLISHED: BukuCreatedEvent dikirim untuk ID [{}]", buku.getId());
+        } catch (Exception e) {
+            logger.error("EVENT ERROR: Gagal mengirim BukuCreatedEvent: {}", e.getMessage());
+        }
     }
-    
-    private void publishBukuUpdatedEvent(Buku buku) {
-        BukuUpdatedEvent event = new BukuUpdatedEvent(
-            buku.getId(),
-            buku.getKodeBuku(),
-            buku.getJudul(),
-            buku.getPengarang(),
-            buku.getPenerbit(),
-            buku.getTahunTerbit()
-        );
-        rabbitTemplate.convertAndSend(exchange, routingKey, event);
-        logger.info("Published RabbitMQ Event: BukuUpdatedEvent for ID: {}", buku.getId());
+
+    private void publishBukuUpdatedEvent(BukuWriteModel buku) {
+        try {
+            BukuUpdatedEvent event = new BukuUpdatedEvent(
+                buku.getId(),
+                buku.getKodeBuku(),
+                buku.getJudul(),
+                buku.getPengarang(),
+                buku.getPenerbit(),
+                buku.getTahunTerbit()
+            );
+            rabbitTemplate.convertAndSend(exchange, routingKey, event);
+            logger.info("EVENT PUBLISHED: BukuUpdatedEvent dikirim untuk ID [{}]", buku.getId());
+        } catch (Exception e) {
+            logger.error("EVENT ERROR: Gagal mengirim BukuUpdatedEvent: {}", e.getMessage());
+        }
     }
-    
-    private void publishBukuDeletedEvent(Long id) {
-        BukuDeletedEvent event = new BukuDeletedEvent(id);
-        rabbitTemplate.convertAndSend(exchange, routingKey, event);
-        logger.info("Published RabbitMQ Event:BukuDeletedEvent for ID: {}", id);
+
+    private void publishBukuDeletedEvent(UUID id) {
+        try {
+            BukuDeletedEvent event = new BukuDeletedEvent(id);
+            rabbitTemplate.convertAndSend(exchange, routingKey, event);
+            logger.info("EVENT PUBLISHED: BukuDeletedEvent dikirim untuk ID [{}]", id);
+        } catch (Exception e) {
+            logger.error("EVENT ERROR: Gagal mengirim BukuDeletedEvent: {}", e.getMessage());
+        }
     }
 }

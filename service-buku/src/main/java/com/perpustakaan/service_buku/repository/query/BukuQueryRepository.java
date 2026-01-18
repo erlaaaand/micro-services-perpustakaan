@@ -5,6 +5,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface BukuQueryRepository extends MongoRepository<BukuReadModel, Long> {
+public interface BukuQueryRepository extends MongoRepository<BukuReadModel, String> {
     BukuReadModel findByKodeBuku(String kodeBuku);
 }

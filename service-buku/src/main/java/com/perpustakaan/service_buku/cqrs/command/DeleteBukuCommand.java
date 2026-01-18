@@ -1,5 +1,7 @@
 package com.perpustakaan.service_buku.cqrs.command;
 
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,5 +11,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DeleteBukuCommand {
-    private Long id;
+    private UUID id;
 }

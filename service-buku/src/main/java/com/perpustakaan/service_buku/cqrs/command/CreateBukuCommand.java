@@ -8,10 +8,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateBukuCommand {
-    // Diubah dari nomorBuku -> kodeBuku agar konsisten
     private String kodeBuku;
     private String judul;
-    // Diubah dari penulis -> pengarang agar konsisten
     private String pengarang;
     private String penerbit;
     private Integer tahunTerbit;

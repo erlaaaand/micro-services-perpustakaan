@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GetBukuByIdQuery {
-    private Long id;
+    private String id;
 }

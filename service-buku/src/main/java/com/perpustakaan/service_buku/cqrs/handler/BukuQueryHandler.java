@@ -20,6 +20,7 @@ public class BukuQueryHandler {
     private BukuQueryRepository bukuRepository;
     
     public BukuReadModel handle(GetBukuByIdQuery query) {
+        
         logger.debug("Handling GetBukuByIdQuery for ID: {}", query.getId());
         return bukuRepository.findById(query.getId()).orElse(null);
     }

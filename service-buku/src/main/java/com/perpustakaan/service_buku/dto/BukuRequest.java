@@ -1,35 +1,45 @@
-// BukuRequest.java
 package com.perpustakaan.service_buku.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
+@Schema(description = "Data payload untuk manajemen buku perpustakaan")
 public class BukuRequest {
-    
-    @NotBlank(message = "Kode buku tidak boleh kosong")
+
+    @NotBlank(message = "Kode buku wajib diisi")
     @Size(min = 3, max = 20, message = "Kode buku harus antara 3-20 karakter")
-    @Schema(description = "Kode unik untuk buku", example = "BK-001")
+    @Schema(
+        description = "Kode unik inventaris buku",
+        example = "B-TI-001", 
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     private String kodeBuku;
-    
-    @NotBlank(message = "Judul tidak boleh kosong")
-    @Size(min = 1, max = 200, message = "Judul maksimal 200 karakter")
-    @Schema(description = "Judul buku", example = "Java Programming")
+
+    @NotBlank(message = "Judul buku wajib diisi")
+    @Size(max = 255, message = "Judul buku maksimal 255 karakter")
+    @Schema(
+        description = "Judul lengkap buku",
+        example = "Clean Architecture: A Craftsman's Guide to Software Structure", 
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     private String judul;
-    
-    @NotBlank(message = "Pengarang tidak boleh kosong")
-    @Size(min = 1, max = 100, message = "Pengarang maksimal 100 karakter")
-    @Schema(description = "Nama pengarang", example = "John Doe")
+
+    @NotBlank(message = "Pengarang wajib diisi")
+    @Schema(description = "Nama pengarang/penulis", example = "Robert C. Martin")
     private String pengarang;
-    
-    @Size(max = 100, message = "Penerbit maksimal 100 karakter")
-    @Schema(description = "Nama penerbit", example = "Erlangga")
+
+    @NotBlank(message = "Penerbit wajib diisi")
+    @Schema(description = "Nama penerbit buku", example = "Prentice Hall")
     private String penerbit;
-    
-    @Min(value = 1900, message = "Tahun terbit harus setelah 1900")
-    @Schema(description = "Tahun terbit buku", example = "2020")
+
+    @NotNull(message = "Tahun terbit wajib diisi")
+    @Min(value = 1900, message = "Tahun terbit tidak valid (minimal 1900)")
+    @Schema(description = "Tahun buku diterbitkan", example = "2017")
     private Integer tahunTerbit;
+
 }
