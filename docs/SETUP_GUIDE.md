@@ -1175,7 +1175,7 @@ docker-compose restart service-anggota service-buku service-peminjaman service-p
 
 Setelah setup selesai:
 
-1. ✅ Baca [Architecture Documentation](docs/ARCHITECTURE.md)
+1. ✅ Baca [Architecture Documentation](ARCHITECTURE.md)
 2. ✅ Pelajari [API Documentation](docs/API_REFERENCE.md)
 3. ✅ Setup [Monitoring Dashboards](docs/MONITORING.md)
 4. ✅ Configure [CI/CD Pipeline](docs/CICD.md)
