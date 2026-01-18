@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GetPengembalianByIdQuery {
-    private Long id;
+    private String id;
 }

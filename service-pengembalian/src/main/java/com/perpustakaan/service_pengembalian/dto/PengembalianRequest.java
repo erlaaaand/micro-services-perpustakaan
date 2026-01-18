@@ -11,7 +11,7 @@ public class PengembalianRequest {
     
     @NotNull(message = "ID Peminjaman tidak boleh kosong")
     @Schema(description = "ID Peminjaman", example = "1")
-    private Long peminjamanId;
+    private String peminjamanId;
     
     @NotBlank(message = "Tanggal dikembalikan tidak boleh kosong")
     @Schema(description = "Tanggal dikembalikan", example = "2023-10-10")

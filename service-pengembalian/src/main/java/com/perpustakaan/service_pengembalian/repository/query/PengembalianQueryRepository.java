@@ -5,5 +5,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PengembalianQueryRepository extends MongoRepository<PengembalianReadModel, Long> {
+public interface PengembalianQueryRepository extends MongoRepository<PengembalianReadModel, String> {
 }

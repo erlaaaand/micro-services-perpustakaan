@@ -4,24 +4,24 @@ import com.perpustakaan.service_pengembalian.cqrs.command.*;
 import com.perpustakaan.service_pengembalian.entity.command.Pengembalian;
 import com.perpustakaan.service_pengembalian.event.*;
 import com.perpustakaan.service_pengembalian.repository.command.PengembalianRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Component
+@RequiredArgsConstructor
 public class PengembalianCommandHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(PengembalianCommandHandler.class);
-
-    @Autowired
-    private PengembalianRepository pengembalianRepository;
-
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
+    
+    private final PengembalianRepository pengembalianRepository;
+    private final RabbitTemplate rabbitTemplate;
 
     @Value("${perpustakaan.rabbitmq.exchange}")
     private String exchange;
@@ -31,7 +31,7 @@ public class PengembalianCommandHandler {
 
     @Transactional
     public Pengembalian handle(CreatePengembalianCommand command) {
-        logger.info("Handle RabbitMQ Event: Handling CreatePengembalianCommand for Peminjaman ID: {}", command.getPeminjamanId());
+        logger.info("Handling CreatePengembalianCommand for Peminjaman ID: {}", command.getPeminjamanId());
 
         Pengembalian pengembalian = new Pengembalian();
         pengembalian.setPeminjamanId(command.getPeminjamanId());
@@ -47,7 +47,7 @@ public class PengembalianCommandHandler {
 
     @Transactional
     public Pengembalian handle(UpdatePengembalianCommand command) {
-        logger.info("Handle RabbitMQ Event: Handling UpdatePengembalianCommand ID: {}", command.getId());
+        logger.info("Handling UpdatePengembalianCommand ID: {}", command.getId());
 
         Pengembalian existing = pengembalianRepository.findById(command.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Pengembalian not found: " + command.getId()));
@@ -65,32 +65,40 @@ public class PengembalianCommandHandler {
 
     @Transactional
     public void handle(DeletePengembalianCommand command) {
-        logger.info("Handle RabbitMQ Event: Handling DeletePengembalianCommand ID: {}", command.getId());
+        logger.info("Handling DeletePengembalianCommand ID: {}", command.getId());
 
         if (!pengembalianRepository.existsById(command.getId())) {
             throw new IllegalArgumentException("Pengembalian not found: " + command.getId());
         }
 
         pengembalianRepository.deleteById(command.getId());
-        
         publishDeletedEvent(command.getId());
     }
 
     private void publishCreatedEvent(Pengembalian p) {
-        PengembalianCreatedEvent event = new PengembalianCreatedEvent(p.getId(), p.getPeminjamanId(), p.getTanggalDikembalikan(), p.getDenda());
+        PengembalianCreatedEvent event = new PengembalianCreatedEvent(
+            p.getId(), 
+            p.getPeminjamanId(), 
+            p.getTanggalDikembalikan(), 
+            p.getTerlambat(), // Pass field ini
+            p.getDenda()
+        );
         rabbitTemplate.convertAndSend(exchange, routingKey, event);
-        logger.info("Published RabbitMQ Event: Internal PengembalianCreatedEvent for ID: {}", p.getId());
     }
 
     private void publishUpdatedEvent(Pengembalian p) {
-        PengembalianUpdatedEvent event = new PengembalianUpdatedEvent(p.getId(), p.getPeminjamanId(), p.getDenda());
+        PengembalianUpdatedEvent event = new PengembalianUpdatedEvent(
+            p.getId(), 
+            p.getPeminjamanId(),
+            p.getTanggalDikembalikan(), 
+            p.getTerlambat(), // Pass field ini
+            p.getDenda()
+        );
         rabbitTemplate.convertAndSend(exchange, routingKey, event);
-        logger.info("Published RabbitMQ Event: PengembalianUpdatedEvent for ID: {}", p.getId());
     }
 
-    private void publishDeletedEvent(Long id) {
+    private void publishDeletedEvent(UUID id) {
         PengembalianDeletedEvent event = new PengembalianDeletedEvent(id);
         rabbitTemplate.convertAndSend(exchange, routingKey, event);
-        logger.info("Published RabbitMQ Event: PengembalianDeletedEvent for ID: {}", id);
     }
 }

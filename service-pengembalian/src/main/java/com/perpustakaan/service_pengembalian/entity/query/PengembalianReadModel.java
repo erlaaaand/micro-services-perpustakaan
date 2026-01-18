@@ -12,8 +12,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 public class PengembalianReadModel {
     @Id
-    private Long id;
-    private Long peminjamanId;
+    private String id;
+    private String peminjamanId;
     private String tanggalDikembalikan;
     private int terlambat;
     private double denda;

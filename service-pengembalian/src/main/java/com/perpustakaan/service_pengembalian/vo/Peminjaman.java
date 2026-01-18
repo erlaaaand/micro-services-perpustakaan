@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Peminjaman {
-    private Long id;
-    private Long anggotaId;
-    private Long bukuId;
+    private String id;
+    private String anggotaId;
+    private String bukuId;
     private String tanggalPinjam;
     private String tanggalKembali;
     private String status;

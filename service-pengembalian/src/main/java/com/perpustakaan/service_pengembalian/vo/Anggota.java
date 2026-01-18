@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Anggota {
-    private Long id;
+    private String id;
     private String nomorAnggota;
     private String nama;
     private String alamat;
