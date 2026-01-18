@@ -1,5 +1,5 @@
 # Ambil base image asli
-FROM jenkins/jenkins:lts-jdk17
+FROM jenkins/jenkins:lts-jdk21
 
 # Masuk sebagai root untuk install program
 USER root

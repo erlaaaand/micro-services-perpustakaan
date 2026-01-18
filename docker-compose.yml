@@ -1,10 +1,5 @@
 version: '3.8'
 
-# ==========================================
-# PERPUSTAKAAN MICROSERVICES STACK
-# Architecture: CQRS (Mongo) + ELK + Jenkins
-# ==========================================
-
 networks:
   perpustakaan-network:
     driver: bridge
@@ -14,13 +9,13 @@ volumes:
     driver: local
   jenkins_home:
     driver: local
-  mongodb-data:  # <--- NEW VOLUME
+  mongodb-data:
+    driver: local
+  # Volume baru untuk Grafana (opsional, agar login tidak reset)
+  grafana-data:
     driver: local
 
 services:
-  # ==========================================
-  # 1. DATABASE INFRASTRUCTURE
-  # ==========================================
   
   mongodb:
     image: mongo:6.0
@@ -43,8 +38,7 @@ services:
   jenkins:
     build: 
       context: .
-      dockerfile: Dockerfile-jenkins  # <-- Arahkan ke file yang baru dibuat
-    # image: jenkins/jenkins:lts-jdk17  <-- HAPUS atau KOMENTAR baris ini
+      dockerfile: Dockerfile-jenkins
     container_name: jenkins
     user: root
     ports:
@@ -52,7 +46,7 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock # Kabel koneksi ke mesin Host
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - perpustakaan-network
     restart: unless-stopped
@@ -63,9 +57,8 @@ services:
           memory: 1G
 
   # ==========================================
-  # 3. LOGGING INFRASTRUCTURE (ELK)
+  # 3. LOGGING INFRASTRUCTURE (ELK STACK)
   # ==========================================
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
     container_name: elasticsearch
@@ -100,6 +93,7 @@ services:
       - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline:ro
     ports:
       - "5000:5000/tcp"
+      - "9600:9600"
     environment:
       - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
@@ -129,6 +123,53 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    restart: unless-stopped
+
+  # ==========================================
+  # 3.1. METRICS & TRACING (BARU DITAMBAHKAN)
+  # ==========================================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      # Mengambil config yang sudah kita buat di folder monitoring
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Agar bisa scrape service via localhost jika perlu
+    networks:
+      - perpustakaan-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      # Provisioning otomatis (Datasource & Dashboard)
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - perpustakaan-network
+    restart: unless-stopped
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - perpustakaan-network
     restart: unless-stopped
 
   # ==========================================
@@ -167,14 +208,13 @@ services:
     image: rabbitmq:3.12-management-alpine
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # Port komunikasi aplikasi (Java)
-      - "15672:15672" # Port Dashboard Management (Browser)
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      # Mapping variabel dari file .env Anda ke variabel asli Image RabbitMQ
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     networks:
-      - perpustakaan-network # Sesuaikan dengan nama network di docker-compose Anda
+      - perpustakaan-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
@@ -200,9 +240,13 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
+      # Tambahan untuk Zipkin (optional jika sudah di application.yml, tapi aman ditaruh sini)
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
+      zipkin:
+        condition: service_started
     networks:
       - perpustakaan-network
     healthcheck:
@@ -230,13 +274,16 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
-      # MONGO CONFIG
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_ANGGOTA}
       - SPRING_DATA_MONGODB_DATABASE=anggota_db
+      # Mengarahkan Zipkin ke container name 'zipkin'
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
       mongodb:
+        condition: service_started
+      zipkin:
         condition: service_started
     networks:
       - perpustakaan-network
@@ -261,9 +308,9 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
-      # MONGO CONFIG
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_BUKU}
       - SPRING_DATA_MONGODB_DATABASE=buku_db
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -292,9 +339,9 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
-      # MONGO CONFIG
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_PEMINJAMAN}
       - SPRING_DATA_MONGODB_DATABASE=peminjaman_db
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -327,9 +374,9 @@ services:
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - LOGSTASH_HOST=logstash
       - LOGSTASH_PORT=5000
-      # MONGO CONFIG
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_PENGEMBALIAN}
       - SPRING_DATA_MONGODB_DATABASE=pengembalian_db
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
         condition: service_healthy

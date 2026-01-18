@@ -157,7 +157,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,env,loggers
+        include: health,info,gateway,env,loggers,prometheus
       base-path: /actuator
   endpoint:
     health:
@@ -171,6 +171,17 @@ management:
       enabled: true
     circuitbreakers:
       enabled: true
+
+metrics:
+    tags:
+      application: ${spring.application.name}
+
+tracing:
+    sampling:
+      probability: 1.0
+zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
 
 # ==========================================
 # RESILIENCE4J CONFIGURATION (CIRCUIT BREAKER)
