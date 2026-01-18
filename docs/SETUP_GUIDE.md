@@ -17,14 +17,14 @@ Panduan lengkap untuk setup proyek dari awal hingga production-ready.
 
 ### 1. Install Prerequisites
 
-**Java Development Kit (JDK) 17**
+**Java Development Kit (JDK) 21**
 ```bash
 # Ubuntu/Debian
 sudo apt update
-sudo apt install openjdk-17-jdk
+sudo apt install openjdk-21-jdk
 
 # MacOS
-brew install openjdk@17
+brew install openjdk@21
 
 # Windows - Download dari Oracle atau AdoptOpenJDK
 # https://adoptium.net/
