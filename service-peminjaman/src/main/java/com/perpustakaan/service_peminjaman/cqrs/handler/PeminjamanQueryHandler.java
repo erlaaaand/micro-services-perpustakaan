@@ -70,7 +70,7 @@ public class PeminjamanQueryHandler {
                     bukuUrl + "/api/buku/" + peminjaman.getBukuId(), 
                     Buku.class
                 );
-                vo.setBuku(buku);
+                vo.setBuku(buku);   
             } else {
                 logger.error("Service URL untuk service-buku tidak ditemukan di Eureka!");
             }

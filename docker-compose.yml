@@ -276,6 +276,10 @@ services:
       - LOGSTASH_PORT=5000
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_ANGGOTA}
       - SPRING_DATA_MONGODB_DATABASE=anggota_db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME} # Pastikan variabel ini ada di .env atau hardcode 'guest'
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       # Mengarahkan Zipkin ke container name 'zipkin'
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
@@ -310,6 +314,10 @@ services:
       - LOGSTASH_PORT=5000
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_BUKU}
       - SPRING_DATA_MONGODB_DATABASE=buku_db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME} # Pastikan variabel ini ada di .env atau hardcode 'guest'
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
@@ -341,6 +349,10 @@ services:
       - LOGSTASH_PORT=5000
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_PEMINJAMAN}
       - SPRING_DATA_MONGODB_DATABASE=peminjaman_db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME} # Pastikan variabel ini ada di .env atau hardcode 'guest'
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:
@@ -376,6 +388,10 @@ services:
       - LOGSTASH_PORT=5000
       - SPRING_DATA_MONGODB_URI=${MONGODB_URI_PENGEMBALIAN}
       - SPRING_DATA_MONGODB_DATABASE=pengembalian_db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=${RABBITMQ_USERNAME} # Pastikan variabel ini ada di .env atau hardcode 'guest'
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin:9411/api/v2/spans
     depends_on:
       eureka-server:

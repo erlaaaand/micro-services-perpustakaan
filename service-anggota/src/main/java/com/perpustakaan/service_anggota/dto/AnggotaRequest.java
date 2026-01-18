@@ -23,7 +23,7 @@ public class AnggotaRequest {
     @Size(min = 3, max = 100, message = "Panjang nama harus antara 3-100 karakter")
     @Schema(
         description = "Nama lengkap sesuai KTP",
-        example = "Muhammad Erland", 
+        example = "Notch", 
         requiredMode = Schema.RequiredMode.REQUIRED
     )
     private String nama;
