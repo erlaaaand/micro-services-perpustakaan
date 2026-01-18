@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Buku {
-    private Long id;
+    private String id;
     private String kodeBuku;
     private String judul;
     private String pengarang;

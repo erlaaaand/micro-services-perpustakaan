@@ -12,9 +12,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 public class PeminjamanReadModel {
     @Id
-    private Long id;
-    private Long anggotaId;
-    private Long bukuId;
+    private String id;
+    private String anggotaId;
+    private String bukuId;
     private String tanggalPinjam;
     private String tanggalKembali;
     private String status;

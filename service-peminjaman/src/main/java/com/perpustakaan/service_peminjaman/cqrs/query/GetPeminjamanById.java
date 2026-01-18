@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GetPeminjamanById {
-    private Long id;
+    private String id;
 }

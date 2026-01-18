@@ -2,62 +2,64 @@ package com.perpustakaan.service_peminjaman.event;
 
 import com.perpustakaan.service_peminjaman.entity.query.PeminjamanReadModel;
 import com.perpustakaan.service_peminjaman.repository.query.PeminjamanQueryRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 @RabbitListener(queues = "${perpustakaan.rabbitmq.queue}")
+@RequiredArgsConstructor
 public class PeminjamanEventListener {
 
     private static final Logger logger = LoggerFactory.getLogger(PeminjamanEventListener.class);
-
-    @Autowired
-    private PeminjamanQueryRepository queryRepository;
+    private final PeminjamanQueryRepository queryRepository;
 
     @RabbitHandler
     public void handleCreatedEvent(PeminjamanCreatedEvent event) {
-        logger.info("RabbitMQ Listener: Created Peminjaman to MongoDB: {}", event.getId());
+        String idString = event.getId().toString();
+        logger.info("RabbitMQ Listener: Sync Create Peminjaman ID [{}] ke MongoDB", idString);
+        
         PeminjamanReadModel model = new PeminjamanReadModel();
-        model.setId(event.getId());
-        model.setAnggotaId(event.getAnggotaId());
-        model.setBukuId(event.getBukuId());
+        model.setId(idString);
+        // Konversi UUID -> String
+        model.setAnggotaId(event.getAnggotaId().toString());
+        model.setBukuId(event.getBukuId().toString());
         model.setTanggalPinjam(event.getTanggalPinjam());
-        // Default value atau logic lain jika null
+        model.setTanggalKembali(null); // Default null saat created (bisa disesuaikan jika field ada di event)
         model.setStatus(event.getStatus()); 
         
         queryRepository.save(model);
-        logger.info("RabbitMQ Listener: Successfully synced ID {}", event.getId());
+        logger.debug("RabbitMQ Listener: Data tersimpan di Read DB.");
     }
 
     @RabbitHandler
     public void handleUpdatedEvent(PeminjamanUpdatedEvent event) {
-        logger.info("RabbitMQ Listener: Updated Peminjaman to MongoDB: {}", event.getId());
+        String idString = event.getId().toString();
+        logger.info("RabbitMQ Listener: Sync Update Peminjaman ID [{}] ke MongoDB", idString);
 
-        PeminjamanReadModel model = queryRepository.findById(event.getId())
+        PeminjamanReadModel model = queryRepository.findById(idString)
             .orElse(new PeminjamanReadModel());
         
-
+        // Update field yang relevan
+        model.setId(idString); 
         model.setStatus(event.getStatus());
-        model.setTanggalKembali(null);
+        model.setTanggalKembali(event.getTanggalKembali());
         
         queryRepository.save(model);
-
-        logger.info("RabbitMQ Listener: Successfully synced ID {}", event.getId());
     }
 
     @RabbitHandler
     public void handleDeletedEvent(PeminjamanDeletedEvent event) {
-        logger.info("RabbitMQ Listener: Deleted Peminjaman from MongoDB: {}", event.getId());
-        if (queryRepository.existsById(event.getId())) {
-            queryRepository.deleteById(event.getId());
+        String idString = event.getId().toString();
+        logger.info("RabbitMQ Listener: Sync Delete Peminjaman ID [{}]", idString);
+        
+        if (queryRepository.existsById(idString)) {
+            queryRepository.deleteById(idString);
         } else {
-            logger.warn("RabbitMQ Listener: Peminjaman ID {} not found for deletion", event.getId());
+            logger.warn("RabbitMQ Listener: ID [{}] tidak ditemukan di MongoDB.", idString);
         }
-
-        logger.info("RabbitMQ Listener: Successfully deleted ID {}", event.getId());
     }
 }
